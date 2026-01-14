@@ -16,102 +16,229 @@ declare global {
 
 // --- Turtle Character Component ---
 const TurtleCharacter = ({ level, className }: { level: number, className?: string }) => {
-  const skinColor = "#a3e635"; 
-  const shellColor = "#4d7c0f"; 
-  const shellStroke = "#365314"; 
-  const blushColor = "#fca5a5"; 
-
   return (
     <svg viewBox="0 0 200 200" className={className} xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="2" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        <linearGradient id="skin-gradient" x1="0" y1="0" x2="1" y2="1">
+           <stop offset="0%" stopColor="#d9f99d" />
+           <stop offset="100%" stopColor="#84cc16" />
+        </linearGradient>
+        
+        <linearGradient id="shell-gold" x1="0" y1="0" x2="1" y2="1">
+           <stop offset="0%" stopColor="#fcd34d" />
+           <stop offset="100%" stopColor="#f59e0b" />
+        </linearGradient>
+
+        <linearGradient id="shell-green" x1="0" y1="0" x2="0" y2="1">
+           <stop offset="0%" stopColor="#86efac" />
+           <stop offset="100%" stopColor="#22c55e" />
+        </linearGradient>
+
+         <linearGradient id="shell-brown" x1="0" y1="0" x2="1" y2="1">
+           <stop offset="0%" stopColor="#d97706" />
+           <stop offset="100%" stopColor="#92400e" />
+        </linearGradient>
+        
+        <filter id="soft-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="2" dy="2" stdDeviation="2" floodOpacity="0.2" />
         </filter>
       </defs>
 
+      {/* --- LV.0: GOD POSTURE (Standing Hero, Front View) --- */}
       {level === 0 && (
-        <g className="animate-bounce-slow">
-           <ellipse cx="100" cy="50" rx="30" ry="8" fill="none" stroke="#fbbf24" strokeWidth="4" />
-           <path d="M60,100 Q40,80 20,90 Q10,110 50,130" fill="#e0f2fe" stroke="#bae6fd" strokeWidth="2" />
-           <path d="M140,100 Q160,80 180,90 Q190,110 150,130" fill="#e0f2fe" stroke="#bae6fd" strokeWidth="2" />
-           <rect x="75" y="80" width="50" height="80" rx="25" fill={skinColor} />
-           <path d="M85,90 L115,90 L115,140 L85,140 Z" fill="#ecfccb" opacity="0.6" rx="10" />
-           <circle cx="100" cy="70" r="35" fill={skinColor} />
-           <circle cx="90" cy="65" r="4" fill="#1a2e05" />
-           <circle cx="110" cy="65" r="4" fill="#1a2e05" />
-           <path d="M95,75 Q100,80 105,75" fill="none" stroke="#1a2e05" strokeWidth="3" strokeLinecap="round" />
-           <ellipse cx="85" cy="72" rx="4" ry="2" fill={blushColor} opacity="0.6" />
-           <ellipse cx="115" cy="72" rx="4" ry="2" fill={blushColor} opacity="0.6" />
-           <text x="100" y="190" textAnchor="middle" fontSize="16" fill="#1a2e05" fontWeight="bold" fontFamily="sans-serif">GOD POSTURE</text>
+        <g className="animate-bounce-slow" filter="url(#shadow)">
+           {/* Aura */}
+           <circle cx="100" cy="100" r="90" fill="url(#shell-gold)" opacity="0.2" />
+           
+           {/* Cape */}
+           <path d="M60,180 L70,80 L130,80 L140,180 L100,170 Z" fill="#ef4444" />
+           
+           {/* Legs */}
+           <path d="M85,130 L85,180" stroke="url(#skin-gradient)" strokeWidth="16" strokeLinecap="round" />
+           <path d="M115,130 L115,180" stroke="url(#skin-gradient)" strokeWidth="16" strokeLinecap="round" />
+           
+           {/* Body */}
+           <rect x="75" y="70" width="50" height="70" rx="15" fill="url(#skin-gradient)" />
+           {/* Abs */}
+           <path d="M85,85 H115 M85,105 H115 M85,125 H115 M100,85 V130" stroke="#4d7c0f" strokeWidth="2" opacity="0.4" />
+           
+           {/* Head */}
+           <circle cx="100" cy="60" r="28" fill="url(#skin-gradient)" />
+           
+           {/* Crown */}
+           <path d="M82,45 L82,25 L91,38 L100,20 L109,38 L118,25 L118,45 Z" fill="#facc15" stroke="#eab308" strokeWidth="1" />
+           
+           {/* Face (Confident) */}
+           <path d="M90,62 Q100,68 110,62" fill="none" stroke="#1a2e05" strokeWidth="2" strokeLinecap="round" /> {/* Smirk */}
+           <path d="M88,55 L95,58" stroke="#1a2e05" strokeWidth="3" strokeLinecap="round" /> {/* Sunglasses/Cool Eyes */}
+           <path d="M105,58 L112,55" stroke="#1a2e05" strokeWidth="3" strokeLinecap="round" />
+           
+           {/* Arms (Hands on hips) */}
+           <path d="M75,80 Q55,100 75,110" fill="none" stroke="url(#skin-gradient)" strokeWidth="10" strokeLinecap="round" />
+           <path d="M125,80 Q145,100 125,110" fill="none" stroke="url(#skin-gradient)" strokeWidth="10" strokeLinecap="round" />
+
+           <text x="100" y="195" textAnchor="middle" fontSize="14" fill="#ca8a04" fontWeight="bold" fontFamily="sans-serif">GOD POSTURE</text>
         </g>
       )}
 
+      {/* --- LV.1: BABY TURTLE (Standing Toddler, Front View) --- */}
       {level === 1 && (
-        <g>
-           <path d="M130,150 Q130,170 110,170 L110,140" fill={skinColor} />
-           <path d="M170,140 Q190,160 180,130" fill={skinColor} /> 
-           <path d="M60,140 Q110,50 170,130 L160,150 L70,150 Z" fill={shellColor} />
-           <path d="M90,90 L130,90 M110,90 L110,65 M110,90 L90,115 M110,90 L130,115" stroke={shellStroke} strokeWidth="3" strokeLinecap="round" opacity="0.5" />
-           <path d="M65,140 Q110,60 165,130" fill="none" stroke={shellStroke} strokeWidth="2" opacity="0.3" />
-           <path d="M80,140 Q80,175 50,170 L60,130" fill={skinColor} />
-           <circle cx="55" cy="110" r="45" fill={skinColor} />
-           <circle cx="40" cy="105" r="5" fill="#1a2e05" /> 
-           <circle cx="70" cy="105" r="5" fill="#1a2e05" /> 
-           <path d="M48,120 Q55,130 62,120" fill="none" stroke="#1a2e05" strokeWidth="3" strokeLinecap="round" /> 
-           <ellipse cx="35" cy="115" rx="5" ry="3" fill={blushColor} opacity="0.5" />
-           <ellipse cx="75" cy="115" rx="5" ry="3" fill={blushColor} opacity="0.5" />
-           <text x="100" y="190" textAnchor="middle" fontSize="16" fill="#4d7c0f" fontWeight="bold" fontFamily="sans-serif">BABY TURTLE</text>
+        <g filter="url(#shadow)">
+           {/* Shell (Visible from back/sides) */}
+           <path d="M60,100 Q50,120 60,140" fill="none" stroke="#22c55e" strokeWidth="12" strokeLinecap="round" />
+           <path d="M140,100 Q150,120 140,140" fill="none" stroke="#22c55e" strokeWidth="12" strokeLinecap="round" />
+
+           {/* Legs (Short & Cute) */}
+           <path d="M85,150 L85,180" stroke="url(#skin-gradient)" strokeWidth="14" strokeLinecap="round" />
+           <path d="M115,150 L115,180" stroke="url(#skin-gradient)" strokeWidth="14" strokeLinecap="round" />
+
+           {/* Body (Round) */}
+           <ellipse cx="100" cy="130" rx="35" ry="32" fill="url(#skin-gradient)" />
+           {/* Diaper/Shell Belly */}
+           <path d="M80,140 Q100,165 120,140" fill="none" stroke="#fff" strokeWidth="20" opacity="0.8" />
+
+           {/* Head (Big) */}
+           <circle cx="100" cy="85" r="38" fill="url(#skin-gradient)" />
+           
+           {/* Face (Big Sparkly Eyes) */}
+           <circle cx="88" cy="85" r="6" fill="#1a2e05" />
+           <circle cx="90" cy="83" r="2" fill="white" />
+           <circle cx="112" cy="85" r="6" fill="#1a2e05" />
+           <circle cx="114" cy="83" r="2" fill="white" />
+           <ellipse cx="85" cy="95" rx="5" ry="3" fill="#fca5a5" opacity="0.6" /> {/* Blush */}
+           <ellipse cx="115" cy="95" rx="5" ry="3" fill="#fca5a5" opacity="0.6" />
+           <path d="M96,98 Q100,102 104,98" fill="none" stroke="#1a2e05" strokeWidth="2" strokeLinecap="round" />
+
+           {/* Arms (Happy Up) */}
+           <path d="M70,110 Q55,90 65,80" fill="none" stroke="url(#skin-gradient)" strokeWidth="10" strokeLinecap="round" />
+           <path d="M130,110 Q145,90 135,80" fill="none" stroke="url(#skin-gradient)" strokeWidth="10" strokeLinecap="round" />
+
+           <text x="100" y="195" textAnchor="middle" fontSize="14" fill="#15803d" fontWeight="bold" fontFamily="sans-serif">BABY TURTLE</text>
         </g>
       )}
 
+      {/* --- LV.2: STUDENT TURTLE (Sitting at Desk, Front View) --- */}
       {level === 2 && (
-        <g>
-           <ellipse cx="140" cy="160" rx="15" ry="10" fill={skinColor} />
-           <ellipse cx="60" cy="160" rx="15" ry="10" fill={skinColor} />
-           <path d="M50,150 Q100,60 160,140" fill={shellColor} />
-           <path d="M80,100 L120,95 M100,70 L100,100" stroke={shellStroke} strokeWidth="3" opacity="0.5" />
-           <g transform="translate(40, 120) rotate(20)">
-             <circle cx="0" cy="0" r="40" fill={skinColor} />
-             <circle cx="-15" cy="5" r="5" fill="#1a2e05" />
-             <circle cx="15" cy="5" r="5" fill="#1a2e05" />
-             <path d="M-5,20 L5,20" stroke="#1a2e05" strokeWidth="2" />
-           </g>
-           <rect x="50" y="150" width="15" height="25" rx="2" fill="#333" transform="rotate(10)" />
-           <path d="M55,152 L55,160" stroke="white" strokeWidth="1" transform="rotate(10)" />
-           <text x="100" y="190" textAnchor="middle" fontSize="16" fill="#ca8a04" fontWeight="bold" fontFamily="sans-serif">SMARTPHONE ZOMBIE</text>
+        <g filter="url(#shadow)">
+           {/* Chair Back (Behind) */}
+           <rect x="60" y="50" width="80" height="100" rx="10" fill="#78350f" />
+           <rect x="70" y="60" width="60" height="80" rx="5" fill="#92400e" />
+
+           {/* Body (Sitting, hunched) */}
+           <path d="M70,120 Q100,110 130,120 L125,180 L75,180 Z" fill="url(#skin-gradient)" />
+           
+           {/* Head (Lowered, forward) */}
+           <circle cx="100" cy="105" r="32" fill="url(#skin-gradient)" />
+           
+           {/* Headband "필승" */}
+           <path d="M68,90 Q100,80 132,90" fill="none" stroke="white" strokeWidth="12" strokeLinecap="round" />
+           <circle cx="100" cy="86" r="5" fill="#ef4444" /> {/* Red circle on headband */}
+           <path d="M128,90 L135,100 L140,90" fill="white" /> {/* Headband knot */}
+
+           {/* Glasses */}
+           <circle cx="90" cy="108" r="9" fill="#e0f2fe" fillOpacity="0.6" stroke="#000" strokeWidth="2" />
+           <circle cx="110" cy="108" r="9" fill="#e0f2fe" fillOpacity="0.6" stroke="#000" strokeWidth="2" />
+           <line x1="99" y1="108" x2="101" y2="108" stroke="#000" strokeWidth="2" />
+
+           {/* Eyes (Tired/Focused) */}
+           <line x1="86" y1="108" x2="94" y2="108" stroke="#000" strokeWidth="2" />
+           <line x1="106" y1="108" x2="114" y2="108" stroke="#000" strokeWidth="2" />
+           <path d="M98,118 Q100,120 102,118" fill="none" stroke="#000" strokeWidth="1" />
+
+           {/* Arms (Resting on desk) */}
+           <path d="M60,150 Q70,170 90,170" fill="none" stroke="url(#skin-gradient)" strokeWidth="14" strokeLinecap="round" />
+           <path d="M140,150 Q130,170 110,170" fill="none" stroke="url(#skin-gradient)" strokeWidth="14" strokeLinecap="round" />
+
+           {/* Desk (Foreground) */}
+           <rect x="20" y="170" width="160" height="30" fill="#d97706" stroke="#b45309" strokeWidth="2" rx="2" />
+           
+           {/* Books */}
+           <rect x="25" y="155" width="40" height="15" fill="#ef4444" stroke="#991b1b" strokeWidth="1" rx="1" />
+           <rect x="30" y="145" width="30" height="10" fill="#3b82f6" stroke="#1e40af" strokeWidth="1" rx="1" />
+           
+           {/* Pencil */}
+           <path d="M110,160 L120,175" stroke="#facc15" strokeWidth="4" strokeLinecap="round" />
+
+           <text x="100" y="195" textAnchor="middle" fontSize="14" fill="#a16207" fontWeight="bold" fontFamily="sans-serif">만년 수험생</text>
         </g>
       )}
 
+      {/* --- LV.3: TURTLE MASTER (Standing Sage, Front View) --- */}
       {level === 3 && (
-        <g>
-           <ellipse cx="150" cy="160" rx="15" ry="10" fill={skinColor} />
-           <ellipse cx="70" cy="160" rx="15" ry="10" fill={skinColor} />
-           <path d="M50,150 Q100,40 170,150" fill="#3f6212" /> 
-           <path d="M80,100 L140,100 M110,70 L110,130" stroke="#1a2e05" strokeWidth="2" opacity="0.3" />
-           <circle cx="60" cy="120" r="40" fill={skinColor} />
-           <path d="M40,110 Q50,105 60,110" fill="none" stroke="white" strokeWidth="4" /> 
-           <path d="M65,110 Q75,105 85,110" fill="none" stroke="white" strokeWidth="4" /> 
-           <path d="M50,140 Q60,150 70,140" fill="none" stroke="white" strokeWidth="4" /> 
-           <path d="M45,120 L55,120" stroke="#1a2e05" strokeWidth="2" />
-           <path d="M70,120 L80,120" stroke="#1a2e05" strokeWidth="2" />
-           <path d="M30,170 L40,120 Q45,110 35,110" fill="none" stroke="#78350f" strokeWidth="4" strokeLinecap="round" />
-           <text x="100" y="190" textAnchor="middle" fontSize="16" fill="#ea580c" fontWeight="bold" fontFamily="sans-serif">MASTER TURTLE</text>
+        <g filter="url(#shadow)">
+           {/* Robe/Shell (Long coat style) */}
+           <path d="M65,180 L75,90 L125,90 L135,180 Z" fill="#78350f" />
+           <line x1="100" y1="90" x2="100" y2="180" stroke="#5c2b0b" strokeWidth="2" />
+
+           {/* Head */}
+           <circle cx="100" cy="75" r="24" fill="url(#skin-gradient)" />
+           
+           {/* Eyebrows (Long White) */}
+           <path d="M85,70 Q90,65 95,70" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" />
+           <path d="M105,70 Q110,65 115,70" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" />
+           
+           {/* Beard (Long White) */}
+           <path d="M90,90 Q100,120 110,90" fill="white" />
+           
+           {/* Staff */}
+           <line x1="145" y1="50" x2="145" y2="180" stroke="#92400e" strokeWidth="5" strokeLinecap="round" />
+           <circle cx="145" cy="50" r="6" fill="#10b981" /> {/* Gem */}
+           
+           {/* Arm holding Staff */}
+           <path d="M120,110 L145,110" stroke="url(#skin-gradient)" strokeWidth="10" strokeLinecap="round" />
+           <circle cx="145" cy="110" r="8" fill="url(#skin-gradient)" />
+           
+           {/* Other Arm (Behind back or relaxed) */}
+           <path d="M80,110 L65,130" stroke="url(#skin-gradient)" strokeWidth="10" strokeLinecap="round" />
+
+           <text x="100" y="195" textAnchor="middle" fontSize="14" fill="#9a3412" fontWeight="bold" fontFamily="sans-serif">TURTLE MASTER</text>
         </g>
       )}
 
+      {/* --- LV.4: NINJA MUTANT (Standing Fighter, Dynamic) --- */}
       {level === 4 && (
-        <g>
-           <path d="M130,160 L150,170 L140,140" fill={skinColor} />
-           <path d="M70,160 L50,170 L60,140" fill={skinColor} />
-           <path d="M50,140 Q100,60 170,150" fill="#15803d" stroke="#000" strokeWidth="3" />
-           <circle cx="60" cy="110" r="40" fill={skinColor} stroke="#000" strokeWidth="2" />
-           <path d="M25,100 L95,100 L95,120 L25,120 Z" fill="#ef4444" />
-           <path d="M15,105 Q10,90 25,100 M15,115 Q10,130 25,120" fill="none" stroke="#ef4444" strokeWidth="4" />
-           <path d="M40,105 L55,115 L40,115 Z" fill="white" />
-           <path d="M80,105 L65,115 L80,115 Z" fill="white" />
-           <path d="M100,90 Q105,80 100,70" fill="none" stroke="#0ea5e9" strokeWidth="2" />
-           <text x="100" y="190" textAnchor="middle" fontSize="16" fill="#dc2626" fontWeight="bold" fontFamily="sans-serif">NINJA MUTANT</text>
+        <g filter="url(#shadow)">
+           {/* Legs (Wide Stance) */}
+           <path d="M80,140 L60,180" stroke="url(#skin-gradient)" strokeWidth="16" strokeLinecap="round" />
+           <path d="M120,140 L140,180" stroke="url(#skin-gradient)" strokeWidth="16" strokeLinecap="round" />
+           
+           {/* Body */}
+           <path d="M75,80 L125,80 L120,140 L80,140 Z" fill="url(#skin-gradient)" />
+           <rect x="75" y="85" width="50" height="45" rx="10" fill="#fcd34d" opacity="0.6" /> {/* Shell Chest */}
+           
+           {/* Belt */}
+           <rect x="75" y="130" width="50" height="12" fill="#52525b" />
+           <circle cx="100" cy="136" r="8" fill="#d97706" />
+           <text x="100" y="140" textAnchor="middle" fontSize="8" fontWeight="bold" fill="white">R</text>
+           
+           {/* Head */}
+           <circle cx="100" cy="65" r="26" fill="url(#skin-gradient)" />
+           
+           {/* Mask (Red) */}
+           <path d="M74,58 H126 V72 H74 Z" fill="#ef4444" />
+           <path d="M126,60 L140,55 L140,75 Z" fill="#ef4444" /> {/* Mask Tails */}
+           
+           {/* Eyes (Angry) */}
+           <path d="M86,68 L96,62" stroke="white" strokeWidth="3" strokeLinecap="round" />
+           <path d="M114,68 L104,62" stroke="white" strokeWidth="3" strokeLinecap="round" />
+           
+           {/* Arms (Action Pose) */}
+           <path d="M75,90 L50,80 L50,50" fill="none" stroke="url(#skin-gradient)" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" />
+           <path d="M125,90 L150,80" fill="none" stroke="url(#skin-gradient)" strokeWidth="12" strokeLinecap="round" />
+           
+           {/* Weapon (Sword) */}
+           <path d="M50,60 L50,10" stroke="#94a3b8" strokeWidth="4" />
+           <rect x="45" y="50" width="10" height="15" fill="#334155" />
+
+           <text x="100" y="195" textAnchor="middle" fontSize="14" fill="#b91c1c" fontWeight="bold" fontFamily="sans-serif">NINJA MUTANT</text>
         </g>
       )}
     </svg>
@@ -129,40 +256,48 @@ const PhotoGuide = () => {
       <div className="flex justify-center gap-4 mb-4">
         <div className="flex flex-col items-center">
           <div className="w-20 h-20 bg-green-50 rounded-full border-2 border-green-500 flex items-center justify-center relative overflow-hidden">
+             {/* Side Profile Icon */}
              <svg viewBox="0 0 100 100" className="w-full h-full text-gray-800">
-               <rect x="35" y="40" width="30" height="40" rx="4" fill="white" stroke="currentColor" strokeWidth="2" />
-               <circle cx="50" cy="55" r="5" fill="#22c55e" />
-               <path d="M30,90 L70,90" stroke="currentColor" strokeWidth="3" />
-               <path d="M80,30 L90,40 M85,25 L95,35" stroke="#ef4444" strokeWidth="2" />
+               <path d="M45,30 Q65,30 65,50 Q65,60 55,60 L55,90" stroke="currentColor" strokeWidth="3" fill="none" />
+               <circle cx="55" cy="40" r="15" fill="#f3f4f6" stroke="currentColor" strokeWidth="2" />
+               <path d="M70,40 L75,40" stroke="currentColor" strokeWidth="2" /> {/* Nose hint */}
+               <path d="M20,90 L80,90" stroke="currentColor" strokeWidth="3" />
              </svg>
              <div className="absolute top-2 right-2 text-green-600 bg-white rounded-full p-0.5 shadow-sm">
                <CheckCircle2 className="w-4 h-4" />
              </div>
           </div>
-          <span className="text-xs font-bold text-green-700 mt-2">타이머 사용</span>
+          <span className="text-xs font-bold text-green-700 mt-2">옆모습 촬영</span>
         </div>
         <div className="flex flex-col items-center opacity-70">
           <div className="w-20 h-20 bg-red-50 rounded-full border-2 border-red-300 flex items-center justify-center relative overflow-hidden">
+             {/* Front Face Icon */}
              <svg viewBox="0 0 100 100" className="w-full h-full text-gray-400">
                <circle cx="50" cy="40" r="15" fill="#e5e7eb" stroke="currentColor" strokeWidth="2"/>
                <path d="M40,80 Q20,60 10,30" fill="none" stroke="currentColor" strokeWidth="3" />
                <path d="M50,55 L50,80" stroke="currentColor" strokeWidth="3" />
+               <circle cx="45" cy="38" r="1.5" fill="currentColor" />
+               <circle cx="55" cy="38" r="1.5" fill="currentColor" />
              </svg>
              <div className="absolute top-2 right-2 text-red-500 bg-white rounded-full p-0.5 shadow-sm">
                <XCircle className="w-4 h-4" />
              </div>
           </div>
-          <span className="text-xs font-bold text-red-400 mt-2">셀카 금지</span>
+          <span className="text-xs font-bold text-red-400 mt-2">앞모습/셀카 X</span>
         </div>
       </div>
       <ul className="text-sm text-gray-600 space-y-2 bg-gray-50 p-3 rounded-lg">
         <li className="flex items-start text-red-500 font-bold">
           <AlertCircle className="w-4 h-4 mr-2 mt-0.5" />
-          <span>셀카는 팔 때문에 어깨가 올라가서 결과가 부정확해요!</span>
+          <span>정확한 측정을 위해 반드시 옆모습을 찍어주세요!</span>
         </li>
         <li className="flex items-start">
           <span className="mr-2 mt-0.5 text-turtle-500">1.</span>
           <span><strong>타이머(3~5초)</strong>를 켜고, 폰을 눈높이에 두세요.</span>
+        </li>
+        <li className="flex items-start">
+          <span className="mr-2 mt-0.5 text-turtle-500">2.</span>
+          <span>가능하면 <strong>옆에 있는 친구</strong>한테 찍어달라고 하세요!</span>
         </li>
       </ul>
     </div>
@@ -305,8 +440,9 @@ export default function App() {
     
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 90) return prev;
-        return prev + Math.floor(Math.random() * 20); 
+        if (prev >= 99) return prev; // Stop random increment if at 99 or more
+        const next = prev + Math.floor(Math.random() * 20); 
+        return Math.min(next, 99); // Ensure it never exceeds 99
       });
     }, 100);
 
@@ -450,6 +586,7 @@ export default function App() {
     const angleDeg = Math.round(angleRad * (180 / Math.PI));
 
     let load = 5;
+    // Kapandji's Biomechanics of the Spine Model
     if (angleDeg <= 0) load = 5;
     else if (angleDeg <= 15) load = 5 + ((12 - 5) * (angleDeg / 15));
     else if (angleDeg <= 30) load = 12 + ((18 - 12) * ((angleDeg - 15) / 15));
@@ -464,7 +601,7 @@ export default function App() {
     } else if (angleDeg <= 15) {
       level = 1; levelTitle = "LV.1 아기 거북이"; message = "아직은 귀여운 수준이지만, 스마트폰을 너무 많이 보면 위험해요!"; color = "#22c55e";
     } else if (angleDeg <= 30) {
-      level = 2; levelTitle = "LV.2 스마트폰 좀비"; message = `목에 볼링공(${finalLoad}kg)을 달고 사는 중! 스마트폰 그만!`; color = "#eab308";
+      level = 2; levelTitle = "LV.2 만년 수험생"; message = `목에 볼링공(${finalLoad}kg)을 달고 열공 중? 스트레칭이 시급해요!`; color = "#eab308";
     } else if (angleDeg <= 45) {
       level = 3; levelTitle = "LV.3 거북 도사"; message = "거의 등껍질이 생기기 직전! 이대로 가다간 만수무강 거북이가 됩니다."; color = "#f97316";
     } else {
@@ -635,6 +772,9 @@ export default function App() {
                    <div className="bg-gray-50 rounded-xl p-3 text-center"><div className="text-xs text-gray-400 mb-1">목 부담 하중</div><div className="text-xl font-bold text-gray-800">{result.weight}kg</div></div>
                 </div>
                 <div className="bg-slate-50 rounded-xl p-4 text-center mb-6"><p className="text-gray-700 font-medium leading-relaxed break-keep">"{result.message}"</p></div>
+                <div className="flex justify-center mb-4">
+                  <p className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1 rounded">수치 근거: Dr. Kapandji (Physiology of the Joints)</p>
+                </div>
                 <div className="space-y-3">
                   <button onClick={handleShare} className="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center space-x-2"><Share2 className="w-5 h-5" /><span>친구에게 내 레벨 자랑하기</span></button>
                   <button onClick={resetAll} className="w-full bg-white border-2 border-gray-200 text-gray-600 font-bold py-3.5 rounded-xl flex items-center justify-center space-x-2"><RefreshCcw className="w-5 h-5" /><span>다시하기</span></button>
