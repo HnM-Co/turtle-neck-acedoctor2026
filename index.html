@@ -4,11 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>거북목 레벨테스트 🐢</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -27,7 +22,7 @@
             },
             fontFamily: {
               sans: ['Inter', 'system-ui', 'sans-serif'],
-              jalnan: ['Jalnan', 'Impact', 'sans-serif'],
+              jalnan: ['Jalnan', 'Impact', 'sans-serif'], // Fun font fallback
             },
             animation: {
               'bounce-slow': 'bounce 3s infinite',
@@ -36,11 +31,23 @@
         }
       }
     </script>
+    <!-- MediaPipe Pose Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-  </head>
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+</head>
   <body class="bg-turtle-50 text-slate-900">
     <div id="root"></div>
-
-    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
