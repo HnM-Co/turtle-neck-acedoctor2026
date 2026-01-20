@@ -1,7 +1,9 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Camera, Upload, Share2, AlertCircle, RefreshCcw, CheckCircle2, XCircle, MousePointer2,
-  Link, X, MessageCircle, Twitter, Instagram, Copy, Image as ImageIcon, Scan, Download
+  Link, X, MessageCircle, Twitter, Instagram, Copy, Image as ImageIcon, Scan, Download,
+  ExternalLink, ChevronRight
 } from 'lucide-react';
 
 // Type definitions for MediaPipe globals
@@ -144,16 +146,30 @@ interface Points {
 export default function App() {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [progress, setProgress] = useState(0); 
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [points, setPoints] = useState<Points | null>(null);
   const [draggingPoint, setDraggingPoint] = useState<'ear' | 'shoulder' | null>(null);
-  const [isGeneratingShareImage, setIsGeneratingShareImage] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [showShareSheet, setShowShareSheet] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const poseModelRef = useRef<any>(null);
+
+  const SHARE_URL = 'https://buly.kr/CWvVquq';
+  
+  // 사용자가 요청한 정확한 킹받는 메시지 포맷
+  const getShareMessage = () => `와... 내 목 각도 킹받네 📐 실화냐? 
+이 정도면 거의 명예 거북이 🐢👑
+
+솔직히 나보다 심한 사람 나와봐 ㅋㅋㅋ (제발 이겨줘...) 
+거북목하면 생각나는 @야 너도 왠지 위험해 보임 ㄱㄱ
+
+1초 만에 확인 👇 [${SHARE_URL}]
+
+#거북목테스트 #킹받아 #요즘유행 #인싸필수템 #거북이그잡채`;
 
   useEffect(() => {
     if (window.Pose) {
@@ -188,7 +204,7 @@ export default function App() {
 
   const drawControlPoint = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, label: string, ratioX: number) => {
     ctx.beginPath(); ctx.arc(x, y, 30, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.globalAlpha = 0.4; ctx.fill(); ctx.globalAlpha = 1.0;
-    ctx.beginPath(); ctx.arc(x, y, 12, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = 'white'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, 12, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = 'white'; ctx.lineWidth = 3; ctx.stroke();
     
     const isTooCloseToRight = ratioX > 0.65;
     ctx.font = 'bold 28px Arial'; 
@@ -211,7 +227,7 @@ export default function App() {
   };
 
   const processImage = async (image: HTMLImageElement) => {
-    setIsAnalyzing(true); setProgress(10);
+    setIsAnalyzing(true);
     if (poseModelRef.current) {
       await poseModelRef.current.reset();
       await poseModelRef.current.send({ image });
@@ -273,101 +289,140 @@ export default function App() {
     setResult({ angle: angleDeg, weight: load, message, level, levelTitle, color, originalImage: original, points });
   };
 
-  const generateAndShareImage = async () => {
-    if (!result || !imageSrc) return;
-    setIsGeneratingShareImage(true);
+  const createResultCanvas = async (): Promise<HTMLCanvasElement> => {
+    if (!result || !imageSrc) throw new Error("No result data");
+    const shareCanvas = document.createElement('canvas');
+    const ctx = shareCanvas.getContext('2d')!;
+    const img = new Image();
+    img.src = imageSrc;
+    await new Promise((resolve) => { img.onload = resolve; });
     
+    shareCanvas.width = 1080;
+    shareCanvas.height = 1440;
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, shareCanvas.width, shareCanvas.height);
+    
+    ctx.globalAlpha = 0.35;
+    const imgRatio = img.width / img.height;
+    const targetW = shareCanvas.width;
+    const targetH = targetW / imgRatio;
+    ctx.drawImage(img, 0, (shareCanvas.height - targetH) / 2, targetW, targetH);
+    
+    ctx.globalAlpha = 1.0;
+    const ex = result.points.ear.x * shareCanvas.width;
+    const ey = (result.points.ear.y * targetH) + (shareCanvas.height - targetH) / 2;
+    const sx = result.points.shoulder.x * shareCanvas.width;
+    const sy = (result.points.shoulder.y * targetH) + (shareCanvas.height - targetH) / 2;
+    
+    ctx.beginPath();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 10;
+    ctx.setLineDash([20, 15]);
+    ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
+    ctx.stroke();
+    
+    ctx.beginPath(); ctx.arc(ex, ey, 25, 0, Math.PI * 2); ctx.fillStyle = '#ef4444'; ctx.fill();
+    ctx.beginPath(); ctx.arc(sx, sy, 25, 0, Math.PI * 2); ctx.fillStyle = '#22c55e'; ctx.fill();
+    
+    ctx.font = 'bold 44px Arial';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'white';
+    
+    const isEarRight = result.points.ear.x > 0.6;
+    ctx.textAlign = isEarRight ? 'right' : 'left';
+    ctx.fillText('👂 EAR', ex + (isEarRight ? -50 : 50), ey);
+    
+    const isShoulderRight = result.points.shoulder.x > 0.6;
+    ctx.textAlign = isShoulderRight ? 'right' : 'left';
+    ctx.fillText('💪 SHOULDER', sx + (isShoulderRight ? -50 : 50), sy);
+    
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.roundRect(50, shareCanvas.height - 300, shareCanvas.width - 100, 250, 40);
+    ctx.fill();
+    
+    ctx.fillStyle = result.color;
+    ctx.font = 'bold 75px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(result.levelTitle, shareCanvas.width / 2, shareCanvas.height - 180);
+    
+    ctx.fillStyle = '#475569';
+    ctx.font = 'bold 42px Arial';
+    ctx.fillText(`ANGLE: ${result.angle}° | LOAD: ${result.weight}kg`, shareCanvas.width / 2, shareCanvas.height - 90);
+    
+    return shareCanvas;
+  };
+
+  const handleDownload = async () => {
+    setIsDownloading(true);
     try {
-      const shareCanvas = document.createElement('canvas');
-      const ctx = shareCanvas.getContext('2d')!;
-      const img = new Image();
-      img.src = imageSrc;
-      
-      await new Promise((resolve) => { img.onload = resolve; });
-      
-      shareCanvas.width = 1080;
-      shareCanvas.height = 1440; // 4:5 ratio
-      
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, shareCanvas.width, shareCanvas.height);
-      
-      ctx.globalAlpha = 0.35;
-      const imgRatio = img.width / img.height;
-      const targetW = shareCanvas.width;
-      const targetH = targetW / imgRatio;
-      ctx.drawImage(img, 0, (shareCanvas.height - targetH) / 2, targetW, targetH);
-      
-      ctx.globalAlpha = 1.0;
-      const ex = result.points.ear.x * shareCanvas.width;
-      const ey = (result.points.ear.y * targetH) + (shareCanvas.height - targetH) / 2;
-      const sx = result.points.shoulder.x * shareCanvas.width;
-      const sy = (result.points.shoulder.y * targetH) + (shareCanvas.height - targetH) / 2;
-      
-      ctx.beginPath();
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 10;
-      ctx.setLineDash([20, 15]);
-      ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
-      ctx.stroke();
-      
-      ctx.beginPath(); ctx.arc(ex, ey, 25, 0, Math.PI * 2); ctx.fillStyle = '#ef4444'; ctx.fill();
-      ctx.beginPath(); ctx.arc(sx, sy, 25, 0, Math.PI * 2); ctx.fillStyle = '#22c55e'; ctx.fill();
-      
-      ctx.font = 'bold 44px Arial';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'white';
-      
-      // 귀 텍스트 (잘림 방지)
-      const isEarRight = result.points.ear.x > 0.6;
-      ctx.textAlign = isEarRight ? 'right' : 'left';
-      ctx.fillText('👂 EAR', ex + (isEarRight ? -50 : 50), ey);
-      
-      // 어깨 텍스트 (잘림 방지)
-      const isShoulderRight = result.points.shoulder.x > 0.6;
-      ctx.textAlign = isShoulderRight ? 'right' : 'left';
-      ctx.fillText('💪 SHOULDER', sx + (isShoulderRight ? -50 : 50), sy);
-      
-      ctx.fillStyle = 'rgba(255,255,255,0.95)';
-      ctx.roundRect(50, shareCanvas.height - 300, shareCanvas.width - 100, 250, 40);
-      ctx.fill();
-      
-      ctx.fillStyle = result.color;
-      ctx.font = 'bold 75px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(result.levelTitle, shareCanvas.width / 2, shareCanvas.height - 180);
-      
-      ctx.fillStyle = '#475569';
-      ctx.font = 'bold 42px Arial';
-      ctx.fillText(`ANGLE: ${result.angle}° | LOAD: ${result.weight}kg`, shareCanvas.width / 2, shareCanvas.height - 90);
-      
-      const blob = await new Promise<Blob>((resolve) => shareCanvas.toBlob((b) => resolve(b!), 'image/png'));
-      const file = new File([blob], 'turtle-neck-report.png', { type: 'image/png' });
-      
-      if (navigator.share && navigator.canShare({ files: [file] })) {
+      const canvas = await createResultCanvas();
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `거북목-진단-${result?.levelTitle.split(' ')[0]}.png`;
+      link.click();
+      showToast("이미지를 저장했습니다!");
+    } catch (err) {
+      console.error(err);
+      showToast("이미지 생성에 실패했습니다.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const shareNativeWithFile = async (channel: 'kakao' | 'insta') => {
+    try {
+      const canvas = await createResultCanvas();
+      const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));
+      const file = new File([blob], 'turtle-neck-result.png', { type: 'image/png' });
+      const fullMessage = getShareMessage();
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: '거북목 레벨테스트 결과',
-          text: `내 거북목 레벨은 [${result.levelTitle}]! 당신의 경추 건강은 안녕하십니까?`,
+          text: fullMessage,
         });
+        setShowShareSheet(false);
       } else {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'turtle-neck-report.png';
-        link.click();
-        alert('이미지를 저장했습니다. 친구들에게 공유해보세요!');
+        // Fallback for Desktop or unsupported browsers
+        if (channel === 'kakao') {
+           window.open(`https://sharer.kakao.com/talk/friends/picker/link?url=${encodeURIComponent(SHARE_URL)}`);
+        } else {
+           showToast("이미지를 다운로드 후 직접 업로드해주세요!");
+           handleDownload();
+        }
+        setShowShareSheet(false);
       }
     } catch (err) {
       console.error(err);
-      alert('이미지 생성 중 오류가 발생했습니다.');
-    } finally {
-      setIsGeneratingShareImage(false);
+      showToast("공유 기능 호출에 실패했습니다.");
     }
+  };
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  const handleCopyLink = () => {
+    const fullText = getShareMessage();
+    navigator.clipboard.writeText(fullText);
+    showToast("킹받는 메시지와 링크가 복사되었습니다!");
+    setShowShareSheet(false);
+  };
+
+  const shareToTwitter = () => {
+    const fullText = getShareMessage();
+    // Twitter has a limit, but the requested text is around 200 chars which fits (limit is 280)
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(fullText)}`);
+    setShowShareSheet(false);
   };
 
   const resetAll = () => { setImageSrc(null); setResult(null); setPoints(null); };
 
   return (
-    <div className="min-h-screen bg-turtle-50 font-sans pb-20">
+    <div className="min-h-screen bg-turtle-50 font-sans pb-20 overflow-x-hidden">
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-turtle-100 px-4 py-3 flex justify-between items-center max-w-md mx-auto">
         <h1 className="text-lg font-bold text-turtle-900">🐢 거북목 레벨테스트</h1>
         <div className="bg-turtle-600 text-white px-2.5 py-1 rounded-full text-[10px] font-black shadow-sm tracking-tighter">AI PRO</div>
@@ -419,7 +474,6 @@ export default function App() {
                       <circle cx={result.points.ear.x * 100} cy={result.points.ear.y * 100} r="2.5" fill="#ef4444" stroke="white" strokeWidth="0.6" />
                       <circle cx={result.points.shoulder.x * 100} cy={result.points.shoulder.y * 100} r="2.5" fill="#22c55e" stroke="white" strokeWidth="0.6" />
                       
-                      {/* SVG 지능형 텍스트 정렬: shoulder 글자 잘림 방지 */}
                       <text 
                         x={result.points.ear.x * 100 + (result.points.ear.x > 0.65 ? -5 : 5)} 
                         y={result.points.ear.y * 100 + 1.2} 
@@ -440,7 +494,6 @@ export default function App() {
                         filter="drop-shadow(0px 1px 1px rgba(0,0,0,0.5))"
                       >💪 SHOULDER</text>
                     </svg>
-                    <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-md px-2 py-0.5 rounded text-[8px] text-white/80 font-bold uppercase tracking-widest">30% Opacity Scan</div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-6">
@@ -454,14 +507,20 @@ export default function App() {
 
                 <div className="space-y-3 mt-8">
                   <button 
-                    onClick={generateAndShareImage} 
-                    disabled={isGeneratingShareImage}
+                    onClick={handleDownload} 
+                    disabled={isDownloading}
                     className="w-full bg-slate-900 text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 disabled:opacity-50 transition-all"
                   >
-                    {isGeneratingShareImage ? <RefreshCcw className="w-5 h-5 animate-spin" /> : <Share2 className="w-5 h-5" />}
-                    결과 이미지와 함께 공유하기
+                    {isDownloading ? <RefreshCcw className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                    결과 이미지 다운 받기
                   </button>
-                  <button onClick={resetAll} className="w-full bg-white border-2 border-slate-100 text-slate-400 py-5 rounded-2xl font-bold active:scale-95 transition-all">처음으로 돌아가기</button>
+                  <button 
+                    onClick={() => setShowShareSheet(true)}
+                    className="w-full bg-white border-2 border-slate-900 text-slate-900 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all"
+                  >
+                    <Share2 className="w-5 h-5" /> 공유하기
+                  </button>
+                  <button onClick={resetAll} className="w-full text-slate-400 py-3 text-sm font-bold hover:text-slate-600 transition-colors">처음으로 돌아가기</button>
                 </div>
               </div>
             )}
@@ -469,15 +528,80 @@ export default function App() {
         )}
       </main>
 
+      {/* Share Sheet Overlay */}
+      {showShareSheet && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 pb-4 animate-fade-in">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowShareSheet(false)} />
+          <div className="relative w-full max-w-md bg-white rounded-[32px] p-6 shadow-2xl animate-slide-up">
+            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6" />
+            <h3 className="text-center font-black text-slate-800 text-xl mb-8">친구들에게 건강 전파하기</h3>
+            
+            <div className="grid grid-cols-4 gap-4 mb-8">
+              <button onClick={() => shareNativeWithFile('kakao')} className="flex flex-col items-center gap-2 group">
+                <div className="w-14 h-14 bg-[#FEE500] rounded-2xl flex items-center justify-center shadow-md group-active:scale-90 transition-transform">
+                  <MessageCircle className="w-7 h-7 text-[#3C1E1E] fill-[#3C1E1E]" />
+                </div>
+                <span className="text-[11px] font-bold text-slate-600">카톡</span>
+              </button>
+              
+              <button onClick={() => shareNativeWithFile('insta')} className="flex flex-col items-center gap-2 group">
+                <div className="w-14 h-14 bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] rounded-2xl flex items-center justify-center shadow-md group-active:scale-90 transition-transform">
+                  <Instagram className="w-7 h-7 text-white" />
+                </div>
+                <span className="text-[11px] font-bold text-slate-600">인스타</span>
+              </button>
+              
+              <button onClick={shareToTwitter} className="flex flex-col items-center gap-2 group">
+                <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center shadow-md group-active:scale-90 transition-transform">
+                  <Twitter className="w-7 h-7 text-white fill-white" />
+                </div>
+                <span className="text-[11px] font-bold text-slate-600">X (트위터)</span>
+              </button>
+              
+              <button onClick={handleCopyLink} className="flex flex-col items-center gap-2 group">
+                <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center shadow-md group-active:scale-90 transition-transform">
+                  <Copy className="w-7 h-7 text-slate-600" />
+                </div>
+                <span className="text-[11px] font-bold text-slate-600">링크복사</span>
+              </button>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                  <Scan className="w-5 h-5 text-turtle-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[12px] font-bold text-slate-800">공유 팁</p>
+                  <p className="text-[10px] text-slate-400">이미지와 함께 "킹받는 메시지"가 자동 포함되어 전송됩니다!</p>
+                </div>
+              </div>
+            </div>
+            
+            <button onClick={() => setShowShareSheet(false)} className="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl font-bold active:scale-95 transition-all">취소</button>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-full text-sm font-bold shadow-2xl animate-toast-in">
+          {toast}
+        </div>
+      )}
+
       <footer className="text-center py-12 opacity-30 text-[10px] max-w-md mx-auto px-10 leading-relaxed font-medium">
         본 진단은 의학적 데이터에 기반한 건강 참고용 분석입니다. <br/> 정기적인 스트레칭과 올바른 자세를 권장합니다.<br/>© 2026 Orthopedic Analysis Lab
       </footer>
 
       <style>{`
-        .scale-up { animation: scaleUp 0.4s cubic-bezier(0.17, 0.67, 0.41, 1.08); }
-        @keyframes scaleUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .animate-toast-in { animation: toastIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes toastIn { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
       `}</style>
     </div>
   );
