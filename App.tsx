@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
-  Camera, Upload, Share2, AlertCircle, RefreshCcw, CheckCircle2, MousePointer2,
-  Image as ImageIcon, Download, Copy
+  Camera, Share2, AlertCircle, RefreshCcw, MousePointer2,
+  Image as ImageIcon, Download, Check, ChevronRight
 } from 'lucide-react';
 
 // Type definitions for MediaPipe globals
@@ -14,207 +15,213 @@ declare global {
   }
 }
 
-// --- Medical Infographic Component ---
-const NeckLoadChart = ({ activeAngle }: { activeAngle: number }) => {
-  const data = [
-    { angle: 0, weight: '4.5~5.4kg', label: '0°' },
-    { angle: 15, weight: '12.2kg', label: '15°' },
-    { angle: 30, weight: '18.1kg', label: '30°' },
-    { angle: 45, weight: '22.2kg', label: '45°' },
-    { angle: 60, weight: '27.2kg', label: '60°' }
-  ];
-
-  const getHighlightColor = (angle: number) => {
-    if (activeAngle <= 5 && angle === 0) return 'rgba(59, 130, 246, 0.15)';
-    if (activeAngle > 5 && activeAngle <= 15 && angle === 15) return 'rgba(34, 197, 94, 0.15)';
-    if (activeAngle > 15 && activeAngle <= 30 && angle === 30) return 'rgba(234, 179, 8, 0.15)';
-    if (activeAngle > 30 && activeAngle <= 45 && angle === 45) return 'rgba(249, 115, 22, 0.15)';
-    if (activeAngle > 45 && angle === 60) return 'rgba(239, 68, 68, 0.15)';
-    return 'transparent';
-  };
-
-  const getBorderColor = (angle: number) => {
-    if (activeAngle <= 5 && angle === 0) return '#3b82f6';
-    if (activeAngle > 5 && activeAngle <= 15 && angle === 15) return '#22c55e';
-    if (activeAngle > 15 && activeAngle <= 30 && angle === 30) return '#eab308';
-    if (activeAngle > 30 && activeAngle <= 45 && angle === 45) return '#f97316';
-    if (activeAngle > 45 && angle === 60) return '#ef4444';
-    return '#f1f5f9';
-  };
-
-  return (
-    <div className="w-full bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mt-4">
-      <div className="flex items-center justify-between mb-4 px-1">
-        <h4 className="text-[11px] font-bold text-gray-800 flex items-center gap-1 whitespace-nowrap">
-           <AlertCircle className="w-3.5 h-3.5 text-turtle-500" />
-           목 각도에 따른 경추 하중 변화
-        </h4>
-        <span className="text-[8px] text-gray-400 whitespace-nowrap">자료: Dr. Hansraj</span>
-      </div>
-      
-      <div className="flex justify-between gap-0.5">
-        {data.map((item) => (
-          <div 
-            key={item.angle} 
-            className="flex-1 flex flex-col items-center p-1 rounded-lg border transition-all duration-300 min-w-0"
-            style={{ 
-              backgroundColor: getHighlightColor(item.angle),
-              borderColor: getBorderColor(item.angle),
-              transform: getHighlightColor(item.angle) !== 'transparent' ? 'scale(1.03)' : 'scale(1)',
-            }}
-          >
-            <span className="text-[7.5px] font-black text-gray-900 mb-0.5 whitespace-nowrap leading-none">
-              {item.weight}
-            </span>
-            <span className="text-[12px] font-black text-slate-400 mb-1.5 whitespace-nowrap leading-none">
-              {item.label}
-            </span>
-            
-            <svg viewBox="0 0 40 65" className="w-full h-auto max-w-[45px]">
-              <path d="M20,25 Q20,45 20,60" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" fill="none" />
-              <g style={{ transform: `rotate(${item.angle}deg)`, transformOrigin: '20px 25px' }}>
-                <circle cx="20" cy="15" r="9" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1.5" />
-                <path d="M20,15 L20,5" stroke={getBorderColor(item.angle)} strokeWidth="2.5" strokeDasharray="2 1.5" />
-                <rect x="5" y="10" width="3" height="7" rx="0.5" fill="#94a3b8" />
-              </g>
-              <circle cx="20" cy="25" r="2.5" fill={getBorderColor(item.angle)} />
-            </svg>
-          </div>
-        ))}
-      </div>
+// --- Toast Component ---
+const Toast = ({ message, visible }: { message: string; visible: boolean }) => (
+  <div className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] transition-all duration-300 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+    <div className="bg-slate-900/90 backdrop-blur-md text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-2.5 border border-white/10 ring-1 ring-black/5">
+      <div className="bg-emerald-500 rounded-full p-0.5"><Check className="w-3 h-3 text-white stroke-[4]" /></div>
+      <span className="text-sm font-bold whitespace-nowrap tracking-tight">{message}</span>
     </div>
-  );
-};
+  </div>
+);
 
-// --- Turtle Character Component ---
-const TurtleCharacter = ({ level, className }: { level: number, className?: string }) => {
+// --- High Quality Turtle Character (SVG) ---
+const TurtleCharacter: React.FC<{ level: number; size?: number; className?: string; id?: string }> = ({ level, size = 180, className = "", id }) => {
+  const getStyle = () => {
+    switch(level) {
+      case 0: return { // King
+        skin: "#86efac", shell: "#fbbf24", belly: "#fef08a", mask: "none", eye: "black", 
+        prop: (<g><path d="M35 15 L50 35 L65 15 L65 35 Z" fill="#fbbf24" stroke="#d97706" strokeWidth="2" /><circle cx="30" cy="10" r="3" fill="red"/><circle cx="50" cy="5" r="3" fill="blue"/><circle cx="70" cy="10" r="3" fill="red"/></g>) 
+      }; 
+      case 1: return { // Baby
+        skin: "#bbf7d0", shell: "#86efac", belly: "#f0fdf4", mask: "none", eye: "black", 
+        prop: <path d="M45 15 Q50 5 55 15 Q50 25 45 15 M50 25 L50 35" fill="#86efac" stroke="#16a34a" strokeWidth="2" />
+      }; 
+      case 2: return { // Student
+        skin: "#a3e635", shell: "#facc15", belly: "#fef08a", mask: "glasses", eye: "black", 
+        prop: <g><rect x="30" y="85" width="40" height="25" fill="#bae6fd" stroke="#0ea5e9" strokeWidth="2" rx="2"/><path d="M35 90 L65 90 M35 98 L65 98 M35 106 L55 106" stroke="white" strokeWidth="2"/></g>
+      };
+      case 3: return { // Master
+        skin: "#fcd34d", shell: "#d97706", belly: "#fef3c7", mask: "beard", eye: "closed", 
+        prop: <path d="M85 60 Q95 60 95 120" stroke="#78350f" strokeWidth="4" strokeLinecap="round" fill="none" />
+      }; 
+      case 4: return { // Ninja
+        skin: "#ef4444", shell: "#991b1b", belly: "#fee2e2", mask: "ninja", eye: "white", 
+        prop: <path d="M15 60 L85 120 M85 60 L15 120" stroke="rgba(0,0,0,0.1)" strokeWidth="4" />
+      };
+      default: return { skin: "#4ade80", shell: "#16a34a", belly: "#dcfce7", mask: "none", eye: "black", prop: null };
+    }
+  };
+
+  const s = getStyle();
+
   return (
-    <svg viewBox="0 0 200 200" className={className} xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="skin-gradient" x1="0" y1="0" x2="1" y2="1">
-           <stop offset="0%" stopColor="#d9f99d" />
-           <stop offset="100%" stopColor="#84cc16" />
-        </linearGradient>
-        <linearGradient id="shell-gold" x1="0" y1="0" x2="1" y2="1">
-           <stop offset="0%" stopColor="#fcd34d" />
-           <stop offset="100%" stopColor="#f59e0b" />
-        </linearGradient>
-        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="2" dy="2" stdDeviation="2" floodOpacity="0.2" />
-        </filter>
-      </defs>
-      <circle cx="100" cy="100" r="80" fill={level === 0 ? "url(#shell-gold)" : "#d9f99d"} filter="url(#shadow)" />
-      <text x="100" y="110" textAnchor="middle" fontSize="16" fontWeight="bold" fill="#166534">LV.{level}</text>
+    <svg id={id} viewBox="0 0 100 100" className={`drop-shadow-lg overflow-visible ${className}`} style={{ width: size, height: size }} xmlns="http://www.w3.org/2000/svg">
+      {level === 4 && <circle cx="50" cy="50" r="45" fill="none" stroke="#ef4444" strokeWidth="2" strokeDasharray="4 4" className="animate-spin-slow" />}
+      {level === 0 && <circle cx="50" cy="50" r="45" fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="10 5" className="animate-pulse" />}
+      <path d="M25 70 Q15 85 25 90" fill={s.skin} stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
+      <path d="M75 70 Q85 85 75 90" fill={s.skin} stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
+      <path d="M25 50 Q10 55 15 70" fill={s.skin} stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
+      <path d="M75 50 Q90 55 85 70" fill={s.skin} stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
+      <ellipse cx="50" cy="65" rx="30" ry="28" fill={s.shell} stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+      <path d="M35 55 Q50 85 65 55 Q50 45 35 55" fill={s.belly} opacity="0.9" />
+      <circle cx="50" cy="35" r="18" fill={s.skin} />
+      {s.mask === 'ninja' && <path d="M32 28 Q50 22 68 28 L68 40 Q50 45 32 40 Z" fill="#b91c1c" />}
+      {s.mask === 'glasses' && <g><circle cx="43" cy="35" r="6" fill="white" stroke="black" strokeWidth="1.5" /><circle cx="57" cy="35" r="6" fill="white" stroke="black" strokeWidth="1.5" /><path d="M49 35 L51 35" stroke="black" strokeWidth="1.5" /><path d="M37 35 L32 32 M63 35 L68 32" stroke="black" strokeWidth="1.5" /></g>}
+      {s.eye === 'closed' ? <g stroke="#78350f" strokeWidth="2" fill="none"><path d="M40 36 Q44 38 48 36" /><path d="M52 36 Q56 38 60 36" /></g> : s.mask !== 'glasses' ? <g fill={s.eye}><circle cx="42" cy="34" r={level === 1 ? 3 : 2} /><circle cx="58" cy="34" r={level === 1 ? 3 : 2} />{level === 1 && <g fill="white"><circle cx="43" cy="33" r="1"/><circle cx="59" cy="33" r="1"/></g>}</g> : <g fill="black"><circle cx="43" cy="35" r="2"/><circle cx="57" cy="35" r="2"/></g>}
+      {s.mask === 'beard' ? <path d="M40 45 Q50 55 60 45 L50 52 Z" fill="white" stroke="#e2e8f0" strokeWidth="0.5" /> : <path d="M47 42 Q50 45 53 42" fill="none" stroke="black" strokeWidth="1.5" strokeLinecap="round" />}
+      {(level === 1 || level === 0) && <g fill="#f472b6" opacity="0.6"><circle cx="38" cy="40" r="2.5" /><circle cx="62" cy="40" r="2.5" /></g>}
+      {s.prop}
+      {level === 0 && <text x="50" y="10" fontSize="10" textAnchor="middle">👑</text>}
     </svg>
   );
 };
 
-// --- Photo Guide Component ---
-const PhotoGuide = () => {
+// --- Infographic ---
+const NeckLoadChart = ({ activeAngle }: { activeAngle: number }) => {
+  const data = [
+    { angle: 0, weight: '5', label: '0°' },
+    { angle: 15, weight: '12', label: '15°' },
+    { angle: 30, weight: '18', label: '30°' },
+    { angle: 45, weight: '22', label: '45°' },
+    { angle: 60, weight: '27', label: '60°' }
+  ];
   return (
-    <div className="bg-white rounded-2xl p-5 border border-turtle-100 shadow-sm mb-4">
-      <h3 className="font-bold text-gray-800 mb-3 flex items-center">
-        <Camera className="w-4 h-4 mr-2 text-turtle-600" />
-        정확한 측정을 위한 촬영 지침
-      </h3>
-      <ul className="text-[11px] text-gray-600 space-y-2 bg-gray-50 p-3 rounded-xl">
-        <li className="flex items-start"><CheckCircle2 className="w-3.5 h-3.5 mr-2 text-green-500" /> 상반신 옆모습이 전체적으로 나오게 찍어주세요.</li>
-        <li className="flex items-start"><CheckCircle2 className="w-3.5 h-3.5 mr-2 text-green-500" /> 귓구멍과 어깨가 가려지지 않아야 합니다.</li>
-      </ul>
+    <div className="w-full bg-slate-50/80 rounded-2xl p-4 border border-slate-100 mt-4">
+      <div className="flex justify-between items-end h-20 gap-1.5">
+        {data.map((item) => {
+           const isActive = activeAngle > item.angle - 7.5 && activeAngle <= item.angle + 7.5;
+           const isPassed = activeAngle >= item.angle;
+           return (
+            <div key={item.angle} className="flex-1 flex flex-col items-center gap-1 group relative">
+              <div className="absolute -top-7 transition-all duration-300 origin-bottom" style={{ transform: `rotate(${item.angle}deg)` }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={isActive ? 'text-emerald-500' : 'text-slate-300'}>
+                   <circle cx="12" cy="8" r="4" /><path d="M12 12L12 20" />
+                </svg>
+              </div>
+              <span className={`text-[9px] font-bold transition-all ${isActive ? 'text-emerald-600' : 'text-slate-300'}`}>{item.weight}kg</span>
+              <div className="w-full bg-white rounded-t-md relative overflow-hidden transition-all duration-500 shadow-inner" style={{ height: `${25 + (item.angle/60)*75}%` }}>
+                <div className={`absolute inset-0 w-full h-full transition-all duration-500 ${isActive ? 'bg-emerald-400' : isPassed ? 'bg-emerald-100' : 'bg-slate-200'}`} />
+              </div>
+              <span className="text-[9px] text-slate-400 font-medium">{item.label}</span>
+            </div>
+           );
+        })}
+      </div>
     </div>
   );
 };
 
-interface AnalysisResult {
-  angle: number;
-  weight: number;
-  message: string;
-  level: number;
-  levelTitle: string;
-  color: string;
-  originalImage: string; 
-  points: Points;
-}
+// --- Compact Guide ---
+const PhotoGuide = () => (
+  <div className="bg-emerald-50/60 rounded-xl p-4 border border-emerald-100/50 mb-4">
+    <h3 className="font-bold text-emerald-900 text-xs flex items-center mb-2.5">
+      <Camera className="w-3.5 h-3.5 mr-1.5 text-emerald-600" /> 촬영 팁
+    </h3>
+    <div className="grid grid-cols-1 gap-2">
+      {[
+        "평소 편한 자세로 옆모습 촬영",
+        "어깨와 귀가 보이게 머리 정리",
+        "타이머/지인 도움으로 수평 유지"
+      ].map((text, i) => (
+        <div key={i} className="flex items-center text-[11px] text-emerald-800/80 bg-white/40 rounded-lg px-2.5 py-1.5">
+          <span className="bg-emerald-200 text-emerald-700 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px] font-bold mr-2 shrink-0">{i+1}</span>
+          {text}
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
-interface Points {
-  ear: { x: number; y: number };
-  shoulder: { x: number; y: number };
+interface AnalysisResult {
+  angle: number; weight: number; level: number; levelTitle: string; color: string; points: Points;
 }
+interface Points { ear: { x: number; y: number }; shoulder: { x: number; y: number }; }
 
 export default function App() {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [points, setPoints] = useState<Points | null>(null);
   const [draggingPoint, setDraggingPoint] = useState<'ear' | 'shoulder' | null>(null);
   const [isProcessingAction, setIsProcessingAction] = useState<'download' | 'share' | null>(null);
+  const [toastMessage, setToastMessage] = useState('');
+  const [isToastVisible, setIsToastVisible] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const poseModelRef = useRef<any>(null);
 
+  // Initialize MediaPipe Pose
   useEffect(() => {
     if (window.Pose) {
-      const pose = new window.Pose({
-        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
-      });
+      const pose = new window.Pose({ locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
       pose.setOptions({ modelComplexity: 1, smoothLandmarks: false, minDetectionConfidence: 0.3, minTrackingConfidence: 0.3 });
       pose.onResults(onPoseResults);
       poseModelRef.current = pose;
     }
   }, []);
 
+  // Optimize Image Loading: Load once, redraw many times
   useEffect(() => {
-    if (canvasRef.current && imageSrc && points) {
-       const canvas = canvasRef.current;
+    if (imageSrc) {
+      const img = new Image();
+      img.src = imageSrc;
+      img.onload = () => setLoadedImage(img);
+    } else {
+      setLoadedImage(null);
+    }
+  }, [imageSrc]);
+
+  const showToast = (msg: string) => { setToastMessage(msg); setIsToastVisible(true); setTimeout(() => setIsToastVisible(false), 3000); };
+
+  // Draw Canvas
+  useEffect(() => {
+    if (canvasRef.current && loadedImage && points) {
+       const canvas = canvasRef.current; 
        const ctx = canvas.getContext('2d');
-       const img = new Image();
-       img.src = imageSrc;
-       img.onload = () => {
-         if (ctx) {
+       if (ctx) {
            ctx.clearRect(0, 0, canvas.width, canvas.height);
-           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+           // Draw Image
+           ctx.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
+           
+           // Draw Overlay
+           ctx.fillStyle = 'rgba(0,0,0,0.1)';
+           ctx.fillRect(0, 0, canvas.width, canvas.height);
+
            const ex = points.ear.x * canvas.width, ey = points.ear.y * canvas.height;
            const sx = points.shoulder.x * canvas.width, sy = points.shoulder.y * canvas.height;
-           ctx.beginPath(); ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; ctx.lineWidth = 6; ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+           
+           // Connector Line
+           ctx.beginPath(); ctx.strokeStyle = 'white'; ctx.lineWidth = 6; ctx.setLineDash([8, 6]);
+           ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+           
            drawControlPoint(ctx, ex, ey, '#ef4444', '👂 EAR', points.ear.x);
            drawControlPoint(ctx, sx, sy, '#22c55e', '💪 SHOULDER', points.shoulder.x);
-         }
-       };
+       }
     }
-  }, [points, imageSrc]);
+  }, [points, loadedImage]); // Depend on loadedImage instead of imageSrc
 
   const drawControlPoint = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, label: string, ratioX: number) => {
-    ctx.beginPath(); ctx.arc(x, y, 30, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.globalAlpha = 0.4; ctx.fill(); ctx.globalAlpha = 1.0;
-    ctx.beginPath(); ctx.arc(x, y, 12, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = 'white'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, 30, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.globalAlpha = 0.3; ctx.fill(); ctx.globalAlpha = 1.0;
+    ctx.beginPath(); ctx.arc(x, y, 12, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = 'white'; ctx.lineWidth = 5; ctx.stroke();
     
-    const isTooCloseToRight = ratioX > 0.65;
-    ctx.font = 'bold 28px Arial'; 
-    ctx.textAlign = isTooCloseToRight ? 'right' : 'left'; 
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'white';
-    ctx.shadowBlur = 8; ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    
-    const offset = isTooCloseToRight ? -45 : 45;
-    ctx.fillText(label, x + offset, y);
-    ctx.shadowBlur = 0;
+    const isRight = ratioX > 0.65;
+    ctx.font = 'bold 24px Inter'; ctx.textAlign = isRight ? 'right' : 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'white'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 4;
+    ctx.fillText(label, x + (isRight ? -45 : 45), y); ctx.shadowBlur = 0;
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setImageSrc(url); setResult(null); setPoints(null);
+    const file = event.target.files?.[0]; if (!file) return;
+    const url = URL.createObjectURL(file); setImageSrc(url); setResult(null); setPoints(null);
     const img = new Image(); img.src = url; img.onload = () => processImage(img);
   };
 
   const processImage = async (image: HTMLImageElement) => {
-    setIsAnalyzing(true);
-    if (poseModelRef.current) {
-      await poseModelRef.current.reset();
-      await poseModelRef.current.send({ image });
-    }
+    setIsAnalyzing(true); if (poseModelRef.current) { await poseModelRef.current.reset(); await poseModelRef.current.send({ image }); }
     setIsAnalyzing(false);
   };
 
@@ -238,8 +245,8 @@ export default function App() {
     const clickX = (e.clientX - rect.left) * scale, clickY = (e.clientY - rect.top) * scale;
     const dE = Math.hypot(clickX - points.ear.x * canvas.width, clickY - points.ear.y * canvas.height);
     const dS = Math.hypot(clickX - points.shoulder.x * canvas.width, clickY - points.shoulder.y * canvas.height);
-    if (dE < 80) { setDraggingPoint('ear'); canvas.setPointerCapture(e.pointerId); }
-    else if (dS < 80) { setDraggingPoint('shoulder'); canvas.setPointerCapture(e.pointerId); }
+    if (dE < 60) { setDraggingPoint('ear'); canvas.setPointerCapture(e.pointerId); }
+    else if (dS < 60) { setDraggingPoint('shoulder'); canvas.setPointerCapture(e.pointerId); }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -254,247 +261,282 @@ export default function App() {
   const handleConfirmPoints = () => {
     if (!points || !canvasRef.current) return;
     const canvas = canvasRef.current;
-    const ex = points.ear.x * canvas.width, ey = points.ear.y * canvas.height;
-    const sx = points.shoulder.x * canvas.width, sy = points.shoulder.y * canvas.height;
-    const deltaX = Math.abs(ex - sx), deltaY = sy - ey;
+    const deltaX = Math.abs(points.ear.x - points.shoulder.x) * canvas.width, deltaY = (points.shoulder.y - points.ear.y) * canvas.height;
     const angleDeg = Math.round(Math.atan2(deltaX, Math.max(1, deltaY)) * (180 / Math.PI));
-    let load = 5;
-    if (angleDeg <= 5) load = 5; else if (angleDeg <= 15) load = 12.2; else if (angleDeg <= 30) load = 18.1; else if (angleDeg <= 45) load = 22.2; else load = 27.2;
-    
-    let level = 0, levelTitle = "", message = "", color = "";
-    if (angleDeg <= 5) { level = 0; levelTitle = "LV.0 탈거북 휴먼"; message = "완벽한 건강 상태입니다!"; color = "#3b82f6"; }
-    else if (angleDeg <= 15) { level = 1; levelTitle = "LV.1 아기 거북이"; message = "약간의 주의가 필요합니다."; color = "#22c55e"; }
-    else if (angleDeg <= 30) { level = 2; levelTitle = "LV.2 만년 수험생"; message = "목에 무리가 가고 있어요!"; color = "#eab308"; }
-    else if (angleDeg <= 45) { level = 3; levelTitle = "LV.3 거북 도사"; message = "적극적인 교정이 필요합니다."; color = "#f97316"; }
-    else { level = 4; levelTitle = "LV.MAX 닌자 거북이"; message = "전문가 상담이 시급합니다!"; color = "#ef4444"; }
-    
-    const original = canvas.toDataURL('image/jpeg', 0.9);
-    setResult({ angle: angleDeg, weight: load, message, level, levelTitle, color, originalImage: original, points });
+    let load = 5, level = 0, levelTitle = "", color = "";
+    if (angleDeg <= 5) { level = 0; levelTitle = "LV.0 탈거북 휴먼"; color = "#3b82f6"; load = 5; }
+    else if (angleDeg <= 15) { level = 1; levelTitle = "LV.1 응애 거북이"; color = "#22c55e"; load = 12; }
+    else if (angleDeg <= 30) { level = 2; levelTitle = "LV.2 흔한 수험생"; color = "#eab308"; load = 18; }
+    else if (angleDeg <= 45) { level = 3; levelTitle = "LV.3 백년 묵은 거북"; color = "#f97316"; load = 22; }
+    else { level = 4; levelTitle = "LV.4 닌자 거북이"; color = "#ef4444"; load = 27; }
+    setResult({ angle: angleDeg, weight: load, level, levelTitle, color, points });
   };
 
   const createResultCanvas = async (): Promise<HTMLCanvasElement> => {
-    const shareCanvas = document.createElement('canvas');
-    const ctx = shareCanvas.getContext('2d')!;
-    const img = new Image();
-    img.src = imageSrc!;
-    await new Promise((resolve) => { img.onload = resolve; });
+    const shareCanvas = document.createElement('canvas'); const ctx = shareCanvas.getContext('2d')!;
+    const img = new Image(); img.src = imageSrc!; await new Promise((resolve) => { img.onload = resolve; });
     
-    shareCanvas.width = 1080;
-    shareCanvas.height = 1440;
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, shareCanvas.width, shareCanvas.height);
+    // Canvas setup
+    shareCanvas.width = 1080; shareCanvas.height = 1920; 
+    ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, shareCanvas.width, shareCanvas.height);
     
-    ctx.globalAlpha = 0.35;
+    // 1. Photo Area (Top 55%)
+    const photoHeight = shareCanvas.height * 0.55;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, shareCanvas.width, photoHeight); ctx.clip();
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, shareCanvas.width, photoHeight);
+    
+    ctx.globalAlpha = 0.3;
     const imgRatio = img.width / img.height;
-    const targetW = shareCanvas.width;
-    const targetH = targetW / imgRatio;
-    ctx.drawImage(img, 0, (shareCanvas.height - targetH) / 2, targetW, targetH);
-    
+    const canvasRatio = shareCanvas.width / photoHeight;
+    let drawW, drawH, drawX, drawY;
+    if (imgRatio > canvasRatio) { drawH = photoHeight; drawW = drawH * imgRatio; drawX = (shareCanvas.width - drawW) / 2; drawY = 0; } 
+    else { drawW = shareCanvas.width; drawH = drawW / imgRatio; drawX = 0; drawY = (photoHeight - drawH) / 2; }
+    ctx.drawImage(img, drawX, drawY, drawW, drawH);
     ctx.globalAlpha = 1.0;
-    const ex = result!.points.ear.x * shareCanvas.width;
-    const ey = (result!.points.ear.y * targetH) + (shareCanvas.height - targetH) / 2;
-    const sx = result!.points.shoulder.x * shareCanvas.width;
-    const sy = (result!.points.shoulder.y * targetH) + (shareCanvas.height - targetH) / 2;
+
+    // Draw Guide Lines
+    const relX = (val: number) => drawX + (val * drawW);
+    const relY = (val: number) => drawY + (val * drawH);
+    const ex = relX(result!.points.ear.x); const ey = relY(result!.points.ear.y);
+    const sx = relX(result!.points.shoulder.x); const sy = relY(result!.points.shoulder.y);
+
+    // Vertical Reference Line
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, sy - 250); 
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; ctx.lineWidth = 4; ctx.setLineDash([10, 10]); ctx.stroke(); ctx.setLineDash([]);
+
+    // Angle Arc
+    const radius = 140; const startAngle = -Math.PI / 2;
+    const isEarRight = ex > sx;
+    const angleRad = result!.angle * (Math.PI / 180);
+    const endAngle = startAngle + (isEarRight ? angleRad : -angleRad);
+
+    ctx.beginPath(); ctx.moveTo(sx, sy);
+    ctx.arc(sx, sy, radius, startAngle, endAngle, !isEarRight); 
+    ctx.lineTo(sx, sy); 
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.25)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(sx, sy, radius, startAngle, endAngle, !isEarRight); ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3; ctx.stroke();
+
+    const textAngle = startAngle + (isEarRight ? angleRad / 2 : -angleRad / 2);
+    const textDist = radius + 60;
+    ctx.font = '900 60px Inter'; ctx.fillStyle = '#ef4444'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'white'; ctx.shadowBlur = 10;
+    ctx.fillText(`${result!.angle}°`, sx + Math.cos(textAngle) * textDist, sy + Math.sin(textAngle) * textDist); ctx.shadowBlur = 0;
+
+    // Connector & Dots
+    ctx.beginPath(); ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 15; ctx.setLineDash([25, 20]); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(ex, ey, 30, 0, Math.PI * 2); ctx.fillStyle = '#ef4444'; ctx.fill();
+    ctx.beginPath(); ctx.arc(ex, ey, 45, 0, Math.PI * 2); ctx.strokeStyle = 'white'; ctx.lineWidth = 6; ctx.stroke();
+    ctx.beginPath(); ctx.arc(sx, sy, 30, 0, Math.PI * 2); ctx.fillStyle = '#22c55e'; ctx.fill();
+    ctx.beginPath(); ctx.arc(sx, sy, 45, 0, Math.PI * 2); ctx.strokeStyle = 'white'; ctx.lineWidth = 6; ctx.stroke();
     
-    ctx.beginPath();
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 10;
-    ctx.setLineDash([20, 15]);
-    ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
-    ctx.stroke();
+    // Labels
+    ctx.font = 'bold 60px Inter, sans-serif'; ctx.fillStyle = 'white'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 15; ctx.textBaseline = 'middle';
+    const isEarRightLabel = result!.points.ear.x > 0.65; const isShoulderRightLabel = result!.points.shoulder.x > 0.65;
+    ctx.textAlign = isEarRightLabel ? 'right' : 'left'; ctx.fillText("👂 EAR", ex + (isEarRightLabel ? -60 : 60), ey);
+    ctx.textAlign = isShoulderRightLabel ? 'right' : 'left'; ctx.fillText("💪 SHOULDER", sx + (isShoulderRightLabel ? -60 : 60), sy);
+    ctx.shadowBlur = 0; ctx.restore();
+
+    // Separator
+    ctx.fillStyle = result!.color; ctx.fillRect(0, photoHeight - 10, shareCanvas.width, 20);
+
+    // 2. Result Area
+    const contentY = photoHeight + 60;
     
-    ctx.beginPath(); ctx.arc(ex, ey, 25, 0, Math.PI * 2); ctx.fillStyle = '#ef4444'; ctx.fill();
-    ctx.beginPath(); ctx.arc(sx, sy, 25, 0, Math.PI * 2); ctx.fillStyle = '#22c55e'; ctx.fill();
-    
-    ctx.font = 'bold 44px Arial';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'white';
-    
-    const isEarRight = result!.points.ear.x > 0.6;
-    ctx.textAlign = isEarRight ? 'right' : 'left';
-    ctx.fillText('👂 EAR', ex + (isEarRight ? -50 : 50), ey);
-    
-    const isShoulderRight = result!.points.shoulder.x > 0.6;
-    ctx.textAlign = isShoulderRight ? 'right' : 'left';
-    ctx.fillText('💪 SHOULDER', sx + (isShoulderRight ? -50 : 50), sy);
-    
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    ctx.roundRect(50, shareCanvas.height - 300, shareCanvas.width - 100, 250, 40);
-    ctx.fill();
-    
-    ctx.fillStyle = result!.color;
-    ctx.font = 'bold 75px Arial';
+    // Turtle
+    const svgElement = document.getElementById(`turtle-svg-${result!.level}`);
+    if (svgElement) {
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const svgUrl = URL.createObjectURL(svgBlob);
+      const turtleImg = new Image(); turtleImg.src = svgUrl;
+      await new Promise(r => turtleImg.onload = r);
+      ctx.drawImage(turtleImg, shareCanvas.width / 2 - 180, contentY, 360, 360);
+      URL.revokeObjectURL(svgUrl);
+    }
+
+    // Text info
     ctx.textAlign = 'center';
-    ctx.fillText(result!.levelTitle, shareCanvas.width / 2, shareCanvas.height - 180);
+    ctx.fillStyle = result!.color; ctx.font = '900 90px Inter, sans-serif';
+    ctx.fillText(result!.levelTitle, shareCanvas.width / 2, contentY + 440);
     
-    ctx.fillStyle = '#475569';
-    ctx.font = 'bold 42px Arial';
-    ctx.fillText(`ANGLE: ${result!.angle}° | LOAD: ${result!.weight}kg`, shareCanvas.width / 2, shareCanvas.height - 90);
-    
+    // Stats Box
+    const boxY = contentY + 500;
+    ctx.fillStyle = '#f1f5f9'; ctx.roundRect(100, boxY, 880, 200, 40); ctx.fill();
+    ctx.fillStyle = '#475569'; ctx.font = 'bold 50px Inter';
+    ctx.fillText("목 각도", 320, boxY + 80); ctx.fillText("경추 하중", 760, boxY + 80);
+    ctx.fillStyle = '#1e293b'; ctx.font = '900 80px Inter';
+    ctx.fillText(`${result!.angle}°`, 320, boxY + 160); ctx.fillText(`${result!.weight}kg`, 760, boxY + 160);
+
+    // Footer
+    ctx.fillStyle = '#94a3b8'; ctx.font = '500 36px Inter';
+    ctx.fillText('당신의 목 건강 지킴이, 거북목 레벨테스트 🐢', shareCanvas.width / 2, shareCanvas.height - 80);
+    ctx.fillStyle = '#cbd5e1'; ctx.font = '500 28px Inter';
+    ctx.fillText('Created by @acedoctor2026', shareCanvas.width / 2, shareCanvas.height - 30);
+
     return shareCanvas;
   };
 
   const handleDownload = async () => {
-    if (!result) return;
-    setIsProcessingAction('download');
+    if (!result) return; setIsProcessingAction('download');
     try {
       const canvas = await createResultCanvas();
       const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `turtle-neck-${result.angle}deg.png`;
-      link.click();
-    } catch (err) {
-      console.error(err);
-      alert('이미지 생성 실패');
-    } finally {
-      setIsProcessingAction(null);
-    }
+      const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `turtle-check-result.png`; link.click();
+      showToast('리포트가 앨범에 저장되었습니다!');
+    } catch (err) { showToast('저장에 실패했습니다.'); } finally { setIsProcessingAction(null); }
   };
 
   const handleShare = async () => {
     if (!result) return;
-    const shareTitle = '거북목 레벨테스트 결과';
-    const shareText = `[거북목 레벨테스트] 내 결과는? [${result.levelTitle}]! 측정 각도 ${result.angle}°, 목 하중 ${result.weight}kg입니다. 당신의 목 건강도 체크해보세요! 🐢`;
-    const shareUrl = window.location.href;
-
+    const shareText = `[거북목 레벨테스트]\n내 레벨: ${result.levelTitle}\n각도: ${result.angle}° (하중 ${result.weight}kg)\n\n🐢 지금 바로 측정해보세요!`;
+    const shareUrl = window.location.origin + window.location.pathname;
     try {
-      // 1. Native Share 시도 (시스템 공유창)
-      if (navigator.share) {
-        await navigator.share({
-          title: shareTitle,
-          text: shareText,
-          url: shareUrl
-        });
-      } else {
-        throw new Error('Native Share not supported');
-      }
+      if (navigator.share && navigator.canShare && navigator.canShare({ text: shareText, url: shareUrl })) { 
+        await navigator.share({ title: '거북목 레벨테스트', text: shareText, url: shareUrl }); 
+      } else { throw new Error('NotSupported'); }
     } catch (err) {
-      // 2. Fallback: 클립보드 복사 (공유창이 취소된 게 아닌 실제 실패인 경우만 안내)
-      if ((err as Error).name !== 'AbortError') {
-        try {
-          await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-          alert('공유 기능이 지원되지 않는 환경이라 결과 요약을 클립보드에 복사했습니다! 원하시는 곳에 붙여넣어 공유해주세요. 📋');
-        } catch (clipErr) {
-          alert('공유 및 복사에 실패했습니다. 결과를 직접 캡처하거나 입력하여 공유해주세요.');
-        }
-      }
+      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+      showToast('결과가 클립보드에 복사되었습니다!');
     }
   };
 
-  const resetAll = () => { setImageSrc(null); setResult(null); setPoints(null); };
+  const resetAll = () => { setImageSrc(null); setResult(null); setPoints(null); setLoadedImage(null); };
 
   return (
-    <div className="min-h-screen bg-turtle-50 font-sans pb-20">
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-turtle-100 px-4 py-3 flex justify-between items-center max-w-md mx-auto">
-        <h1 className="text-lg font-bold text-turtle-900">🐢 거북목 레벨테스트</h1>
-        <div className="bg-turtle-600 text-white px-2.5 py-1 rounded-full text-[10px] font-black shadow-sm tracking-tighter">AI PRO</div>
+    <div className="min-h-screen bg-slate-50 font-sans pb-10 select-none overflow-x-hidden text-slate-900 flex flex-col">
+      <div className="hidden">
+        {[0,1,2,3,4].map(l => ( <TurtleCharacter key={l} id={`turtle-svg-${l}`} level={l} size={400} /> ))}
+      </div>
+
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 px-5 py-3 flex justify-between items-center max-w-md mx-auto w-full shadow-sm">
+        <h1 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+          🐢 거북목 레벨테스트
+        </h1>
+        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full ring-1 ring-emerald-100">@acedoctor2026</span>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-6">
+      <main className="max-w-md mx-auto px-4 py-6 flex-1 w-full">
         {!imageSrc ? (
-          <div className="bg-white rounded-3xl p-8 shadow-xl border border-turtle-100 flex flex-col items-center animate-fade-in">
-            <TurtleCharacter level={1} className="w-40 h-40 mb-6 animate-bounce-slow" />
+          <div className="flex flex-col gap-4 animate-fade-in">
+            <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 text-center">
+              <div className="bg-emerald-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-5 ring-8 ring-emerald-50/50">
+                <TurtleCharacter level={1} size={80} />
+              </div>
+              <h2 className="text-xl font-black text-slate-900 mb-2">당신의 목은 안녕하십니까?</h2>
+              <p className="text-slate-500 text-xs mb-6 leading-relaxed">AI가 3초만에 거북목 레벨을 진단합니다.<br/>지금 바로 확인해보세요!</p>
+              
+              <div className="flex flex-col gap-2.5">
+                <button onClick={() => cameraInputRef.current?.click()} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-base shadow-lg shadow-slate-900/20 active:scale-95 transition-all flex items-center justify-center gap-2.5">
+                  <Camera className="w-5 h-5" /> 카메라로 측정
+                </button>
+                <button onClick={() => fileInputRef.current?.click()} className="w-full bg-white border border-slate-200 text-slate-700 py-4 rounded-xl font-bold text-base hover:bg-slate-50 active:scale-95 transition-all flex items-center justify-center gap-2.5">
+                  <ImageIcon className="w-5 h-5" /> 앨범에서 선택
+                </button>
+              </div>
+            </div>
             <PhotoGuide />
-            <button onClick={() => cameraInputRef.current?.click()} className="w-full bg-turtle-600 text-white py-5 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 mb-3 active:scale-95 transition-all">
-              <Camera className="w-6 h-6" /> 측정 시작하기
-            </button>
-            <button onClick={() => fileInputRef.current?.click()} className="w-full border-2 border-turtle-100 text-turtle-700 py-5 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
-              <ImageIcon className="w-6 h-6" /> 앨범에서 선택
-            </button>
-            <input type="file" ref={cameraInputRef} className="hidden" capture="environment" onChange={handleFileUpload} />
-            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+            <div className="text-center mt-2">
+               <p className="text-[10px] text-slate-400">Created by <span className="font-bold">@acedoctor2026</span></p>
+            </div>
+            <input type="file" ref={cameraInputRef} className="hidden" capture="environment" accept="image/*" onChange={handleFileUpload} />
+            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
           </div>
         ) : (
-          <div className="space-y-6 animate-fade-in">
-            <div className="relative bg-slate-900 rounded-3xl overflow-hidden shadow-2xl aspect-[3/4] touch-none border border-slate-800">
+          <div className="space-y-4 animate-fade-in">
+            {/* Analysis View */}
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-slate-900 aspect-[3/4] ring-4 ring-white">
               <canvas ref={canvasRef} onPointerDown={!result ? handlePointerDown : undefined} onPointerMove={!result ? handlePointerMove : undefined} onPointerUp={() => setDraggingPoint(null)} className="w-full h-full object-contain" />
-              {isAnalyzing && <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-white"><p className="text-xl font-black animate-pulse tracking-widest uppercase">SCANNING SPINE...</p></div>}
+              {isAnalyzing && (
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+                  <RefreshCcw className="w-10 h-10 animate-spin mb-4 opacity-80" />
+                  <p className="font-bold tracking-widest text-xs opacity-80 animate-pulse">AI ANALYZING...</p>
+                </div>
+              )}
+              {!result && !isAnalyzing && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/50 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 pointer-events-none">
+                  <MousePointer2 className="w-3.5 h-3.5 text-emerald-400" /> 드래그하여 귀와 어깨를 맞춰주세요
+                </div>
+              )}
             </div>
 
             {!result && !isAnalyzing && (
-              <div className="bg-white p-6 rounded-3xl shadow-lg border border-turtle-100 text-center">
-                <p className="text-sm font-bold text-gray-500 mb-6 flex items-center justify-center gap-2">
-                   <MousePointer2 className="w-4 h-4 text-turtle-500" /> 포인트를 귓구멍과 어깨에 맞추세요
-                </p>
-                <div className="flex gap-3">
-                  <button onClick={resetAll} className="flex-1 py-4 text-gray-400 font-bold border-2 rounded-2xl active:scale-95 transition-all">다시 촬영</button>
-                  <button onClick={handleConfirmPoints} className="flex-[2] py-4 bg-turtle-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all">분석 완료</button>
-                </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button onClick={resetAll} className="col-span-1 py-4 text-slate-500 font-bold bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-sm">재촬영</button>
+                <button onClick={handleConfirmPoints} className="col-span-2 py-4 bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
+                  결과 확인하기 <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             )}
 
             {result && (
-              <div className="bg-white rounded-3xl p-6 shadow-xl border-2 border-b-8 relative animate-fade-in" style={{ borderColor: result.color }}>
-                <div className="text-center mb-6">
-                  <p className="text-gray-400 text-[9px] font-bold tracking-[0.2em] uppercase mb-1">Diagnostic Report</p>
-                  <h2 className="text-3xl font-black mb-1" style={{ color: result.color }}>{result.levelTitle}</h2>
-                  
-                  <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border border-gray-100 my-6 bg-slate-900 shadow-inner">
-                    <img src={result.originalImage} className="absolute inset-0 w-full h-full object-cover opacity-30" alt="bg" />
-                    <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="xMidYMid slice">
-                      <line x1={result.points.shoulder.x * 100} y1={result.points.shoulder.y * 100} x2={result.points.ear.x * 100} y2={result.points.ear.y * 100} stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" strokeDasharray="3 2" />
-                      <circle cx={result.points.ear.x * 100} cy={result.points.ear.y * 100} r="2.5" fill="#ef4444" stroke="white" strokeWidth="0.6" />
-                      <circle cx={result.points.shoulder.x * 100} cy={result.points.shoulder.y * 100} r="2.5" fill="#22c55e" stroke="white" strokeWidth="0.6" />
-                      <text 
-                        x={result.points.ear.x * 100 + (result.points.ear.x > 0.65 ? -5 : 5)} 
-                        y={result.points.ear.y * 100 + 1.2} 
-                        fontSize="4.8" 
-                        fill="white" 
-                        fontWeight="bold"
-                        textAnchor={result.points.ear.x > 0.65 ? "end" : "start"}
-                      >👂 EAR</text>
-                      <text 
-                        x={result.points.shoulder.x * 100 + (result.points.shoulder.x > 0.65 ? -5 : 5)} 
-                        y={result.points.shoulder.y * 100 + 1.2} 
-                        fontSize="4.8" 
-                        fill="white" 
-                        fontWeight="bold"
-                        textAnchor={result.points.shoulder.x > 0.65 ? "end" : "start"}
-                      >💪 SHOULDER</text>
-                    </svg>
-                    <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-md px-2 py-0.5 rounded text-[8px] text-white/80 font-bold uppercase tracking-widest">30% Opacity Scan</div>
-                  </div>
+              <div className="space-y-4">
+                 {/* Result Card */}
+                <div className="bg-white rounded-3xl p-5 shadow-xl shadow-slate-200/50 border-2 overflow-hidden relative" style={{ borderColor: result.color }}>
+                   <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-50" style={{ backgroundColor: result.color }} />
+                   
+                   <div className="flex flex-col">
+                     <div className="flex items-center justify-between mb-4">
+                        <span className="bg-slate-100 px-2.5 py-1 rounded-full text-[10px] font-black text-slate-500 tracking-wider uppercase">Result</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-bold text-slate-400">LV.{result.level}</span>
+                        </div>
+                     </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100"><p className="text-[9px] text-gray-400 font-bold tracking-wider">ANGLE</p><p className="text-2xl font-black text-slate-800">{result.angle}°</p></div>
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100"><p className="text-[9px] text-gray-400 font-bold tracking-wider">LOAD</p><p className="text-2xl font-black text-slate-800">{result.weight}kg</p></div>
-                  </div>
+                     <div className="flex items-center gap-4 mb-4">
+                        <div className="relative shrink-0">
+                           <div className="bg-slate-50 w-24 h-24 rounded-2xl flex items-center justify-center border border-slate-100">
+                              <TurtleCharacter level={result.level} size={80} />
+                           </div>
+                           <div className="absolute -bottom-1 -right-1 bg-white px-1.5 py-0.5 rounded border shadow-sm text-[10px] font-black" style={{ color: result.color, borderColor: result.color }}>LV.{result.level}</div>
+                        </div>
+                        <div className="flex-1">
+                           <h2 className="text-xl font-black text-slate-900 leading-tight mb-2 break-keep">{result.levelTitle}</h2>
+                           <div className="grid grid-cols-2 gap-2">
+                             <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
+                               <p className="text-[9px] font-bold text-slate-400 uppercase">Angle</p>
+                               <p className="text-base font-black text-slate-800">{result.angle}°</p>
+                             </div>
+                             <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
+                               <p className="text-[9px] font-bold text-slate-400 uppercase">Load</p>
+                               <p className="text-base font-black text-slate-800">{result.weight}kg</p>
+                             </div>
+                           </div>
+                        </div>
+                     </div>
+                     <div className="w-full h-px bg-slate-100" />
+                     <NeckLoadChart activeAngle={result.angle} />
+                   </div>
                 </div>
 
-                <NeckLoadChart activeAngle={result.angle} />
-
-                <div className="space-y-3 mt-8">
-                  <button 
-                    onClick={handleDownload} 
-                    disabled={!!isProcessingAction}
-                    className="w-full bg-slate-900 text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 disabled:opacity-50 transition-all"
-                  >
-                    {isProcessingAction === 'download' ? <RefreshCcw className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-                    결과 이미지 다운 받기
+                {/* Actions */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button onClick={handleDownload} disabled={!!isProcessingAction} className="bg-slate-900 text-white py-3.5 rounded-xl font-bold text-sm shadow-xl shadow-slate-900/10 active:scale-95 disabled:opacity-70 transition-all flex items-center justify-center gap-2">
+                    {isProcessingAction === 'download' ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                    저장
                   </button>
-                  <button 
-                    onClick={handleShare}
-                    className="w-full bg-white border-2 border-slate-200 text-slate-700 py-5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-95 hover:bg-slate-50 transition-all"
-                  >
-                    <Share2 className="w-5 h-5 text-turtle-600" />
-                    결과 요약 공유하기
+                  <button onClick={handleShare} className="bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl font-bold text-sm shadow-sm hover:bg-slate-50 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <Share2 className="w-4 h-4" /> 공유
                   </button>
-                  <button onClick={resetAll} className="w-full text-slate-400 py-4 text-xs font-bold underline active:opacity-50 transition-all">처음으로 돌아가기</button>
+                </div>
+                <button onClick={resetAll} className="w-full py-3 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors">처음으로 돌아가기</button>
+                
+                <div className="text-center pb-2">
+                   <p className="text-[9px] text-slate-300">Created by @acedoctor2026</p>
                 </div>
               </div>
             )}
           </div>
         )}
       </main>
-
-      <footer className="text-center py-12 opacity-30 text-[10px] max-w-md mx-auto px-10 leading-relaxed font-medium">
-        본 진단은 의학적 데이터에 기반한 건강 참고용 분석입니다. <br/> 정기적인 스트레칭과 올바른 자세를 권장합니다.<br/>© 2026 Orthopedic Analysis Lab
-      </footer>
-
+      
+      <Toast message={toastMessage} visible={isToastVisible} />
+      
       <style>{`
-        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        .animate-spin-slow { animation: spin 8s linear infinite; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );
