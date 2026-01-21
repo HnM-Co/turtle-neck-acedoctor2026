@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Camera, Share2, AlertCircle, RefreshCcw, MousePointer2,
-  Image as ImageIcon, Download, Check, ChevronRight
+  Image as ImageIcon, Download, Check, ChevronRight, Quote
 } from 'lucide-react';
 
 // Type definitions for MediaPipe globals
@@ -134,7 +134,7 @@ const PhotoGuide = () => (
 );
 
 interface AnalysisResult {
-  angle: number; weight: number; level: number; levelTitle: string; color: string; points: Points;
+  angle: number; weight: number; level: number; levelTitle: string; description: string; color: string; points: Points;
 }
 interface Points { ear: { x: number; y: number }; shoulder: { x: number; y: number }; }
 
@@ -164,7 +164,7 @@ export default function App() {
     }
   }, []);
 
-  // Optimize Image Loading: Load once, redraw many times
+  // Optimize Image Loading
   useEffect(() => {
     if (imageSrc) {
       const img = new Image();
@@ -188,30 +188,71 @@ export default function App() {
            ctx.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
            
            // Draw Overlay
-           ctx.fillStyle = 'rgba(0,0,0,0.1)';
+           ctx.fillStyle = 'rgba(0,0,0,0.15)'; // Slightly darker for contrast
            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
            const ex = points.ear.x * canvas.width, ey = points.ear.y * canvas.height;
            const sx = points.shoulder.x * canvas.width, sy = points.shoulder.y * canvas.height;
            
            // Connector Line
-           ctx.beginPath(); ctx.strokeStyle = 'white'; ctx.lineWidth = 6; ctx.setLineDash([8, 6]);
+           ctx.beginPath(); ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'; ctx.lineWidth = 4; ctx.setLineDash([8, 6]);
            ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
            
-           drawControlPoint(ctx, ex, ey, '#ef4444', '👂 EAR', points.ear.x);
-           drawControlPoint(ctx, sx, sy, '#22c55e', '💪 SHOULDER', points.shoulder.x);
+           drawControlPoint(ctx, ex, ey, '#ef4444');
+           drawControlPoint(ctx, sx, sy, '#22c55e');
        }
     }
-  }, [points, loadedImage]); // Depend on loadedImage instead of imageSrc
+  }, [points, loadedImage]);
 
-  const drawControlPoint = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, label: string, ratioX: number) => {
-    ctx.beginPath(); ctx.arc(x, y, 30, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.globalAlpha = 0.3; ctx.fill(); ctx.globalAlpha = 1.0;
-    ctx.beginPath(); ctx.arc(x, y, 12, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = 'white'; ctx.lineWidth = 5; ctx.stroke();
+  const drawControlPoint = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string) => {
+    // Outer touch area glow (HUGE for accessibility)
+    ctx.beginPath(); ctx.arc(x, y, 60, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.globalAlpha = 0.2; ctx.fill(); ctx.globalAlpha = 1.0;
     
-    const isRight = ratioX > 0.65;
-    ctx.font = 'bold 24px Inter'; ctx.textAlign = isRight ? 'right' : 'left'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'white'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 4;
-    ctx.fillText(label, x + (isRight ? -45 : 45), y); ctx.shadowBlur = 0;
+    // Middle glow
+    ctx.beginPath(); ctx.arc(x, y, 35, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.globalAlpha = 0.4; ctx.fill(); ctx.globalAlpha = 1.0;
+
+    // Inner solid dot (Bigger)
+    ctx.beginPath(); ctx.arc(x, y, 20, 0, 2 * Math.PI); ctx.fillStyle = color; ctx.fill(); 
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 5; ctx.stroke();
+    
+    // Center white dot
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, 2 * Math.PI); ctx.fillStyle = 'white'; ctx.fill();
+  };
+
+  // Helper to map Client Coordinates to Canvas Image Coordinates with object-fit:contain support
+  const getCanvasCoordinates = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+
+    const rect = canvas.getBoundingClientRect();
+    const canvasAspect = canvas.width / canvas.height;
+    const rectAspect = rect.width / rect.height;
+
+    let drawWidth, drawHeight, offsetX, offsetY, scale;
+
+    if (canvasAspect > rectAspect) {
+      // Image is wider than container (constrained by width) -> Bars on Top/Bottom
+      drawWidth = rect.width;
+      drawHeight = drawWidth / canvasAspect;
+      offsetX = 0;
+      offsetY = (rect.height - drawHeight) / 2;
+      scale = canvas.width / drawWidth; // Canvas Pixels per Visual Pixel
+    } else {
+      // Image is taller than container (constrained by height) -> Bars on Left/Right
+      drawHeight = rect.height;
+      drawWidth = drawHeight * canvasAspect;
+      offsetX = (rect.width - drawWidth) / 2;
+      offsetY = 0;
+      scale = canvas.height / drawHeight;
+    }
+
+    const clientX = e.clientX - rect.left;
+    const clientY = e.clientY - rect.top;
+
+    return {
+      x: (clientX - offsetX) * scale,
+      y: (clientY - offsetY) * scale
+    };
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -240,21 +281,32 @@ export default function App() {
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!points || !canvasRef.current) return;
-    const canvas = canvasRef.current; const rect = canvas.getBoundingClientRect();
-    const scale = canvas.width / rect.width;
-    const clickX = (e.clientX - rect.left) * scale, clickY = (e.clientY - rect.top) * scale;
+    const canvas = canvasRef.current;
+    
+    // Use the corrected coordinate mapper
+    const { x: clickX, y: clickY } = getCanvasCoordinates(e);
+
+    // Hit detection radius (scaled to canvas resolution)
+    const minDim = Math.min(canvas.width, canvas.height);
+    const hitRadius = Math.max(100, minDim * 0.15); // 15% of screen or 100px
+
     const dE = Math.hypot(clickX - points.ear.x * canvas.width, clickY - points.ear.y * canvas.height);
     const dS = Math.hypot(clickX - points.shoulder.x * canvas.width, clickY - points.shoulder.y * canvas.height);
-    if (dE < 60) { setDraggingPoint('ear'); canvas.setPointerCapture(e.pointerId); }
-    else if (dS < 60) { setDraggingPoint('shoulder'); canvas.setPointerCapture(e.pointerId); }
+
+    if (dE < hitRadius) { setDraggingPoint('ear'); canvas.setPointerCapture(e.pointerId); }
+    else if (dS < hitRadius) { setDraggingPoint('shoulder'); canvas.setPointerCapture(e.pointerId); }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!draggingPoint || !points || !canvasRef.current) return;
-    const canvas = canvasRef.current; const rect = canvas.getBoundingClientRect();
-    const scale = canvas.width / rect.width;
-    const nx = Math.min(Math.max((e.clientX - rect.left) * scale / canvas.width, 0), 1);
-    const ny = Math.min(Math.max((e.clientY - rect.top) * scale / canvas.height, 0), 1);
+    const canvas = canvasRef.current;
+    
+    // Use the corrected coordinate mapper
+    const { x: moveX, y: moveY } = getCanvasCoordinates(e);
+
+    const nx = Math.min(Math.max(moveX / canvas.width, 0), 1);
+    const ny = Math.min(Math.max(moveY / canvas.height, 0), 1);
+    
     setPoints(p => p ? { ...p, [draggingPoint]: { x: nx, y: ny } } : null);
   };
 
@@ -263,13 +315,40 @@ export default function App() {
     const canvas = canvasRef.current;
     const deltaX = Math.abs(points.ear.x - points.shoulder.x) * canvas.width, deltaY = (points.shoulder.y - points.ear.y) * canvas.height;
     const angleDeg = Math.round(Math.atan2(deltaX, Math.max(1, deltaY)) * (180 / Math.PI));
-    let load = 5, level = 0, levelTitle = "", color = "";
-    if (angleDeg <= 5) { level = 0; levelTitle = "LV.0 탈거북 휴먼"; color = "#3b82f6"; load = 5; }
-    else if (angleDeg <= 15) { level = 1; levelTitle = "LV.1 응애 거북이"; color = "#22c55e"; load = 12; }
-    else if (angleDeg <= 30) { level = 2; levelTitle = "LV.2 흔한 수험생"; color = "#eab308"; load = 18; }
-    else if (angleDeg <= 45) { level = 3; levelTitle = "LV.3 백년 묵은 거북"; color = "#f97316"; load = 22; }
-    else { level = 4; levelTitle = "LV.4 닌자 거북이"; color = "#ef4444"; load = 27; }
-    setResult({ angle: angleDeg, weight: load, level, levelTitle, color, points });
+    let load = 5, level = 0, levelTitle = "", description = "", color = "";
+    
+    if (angleDeg <= 5) { 
+      level = 0; 
+      levelTitle = "LV.0 탈거북 휴먼"; 
+      description = "교과서 표본이네요. 혹시, 폰 안 쓰십니까?";
+      color = "#3b82f6"; 
+      load = 5; 
+    } else if (angleDeg <= 15) { 
+      level = 1; 
+      levelTitle = "LV.1 아기거북이"; 
+      description = "아직은 사람 목입니다. 두 턱 만들기 10번씩 하세요!";
+      color = "#22c55e"; 
+      load = 12; 
+    } else if (angleDeg <= 30) { 
+      level = 2; 
+      levelTitle = "LV.2 수험생 거북이"; 
+      description = "목 위에 볼링공 하나 얹고 사시네요. 어깨 안아프십니까?";
+      color = "#eab308"; 
+      load = 18; 
+    } else if (angleDeg <= 45) { 
+      level = 3; 
+      levelTitle = "LV.3 거북도사"; 
+      description = "이 정도면 척추가 주인을 고소해도 법적으로 할 말 없습니다.";
+      color = "#f97316"; 
+      load = 22; 
+    } else { 
+      level = 4; 
+      levelTitle = "LV.4 닌자거북이"; 
+      description = "당신은 인류의 진화를 정면으로 거스른 닌자거북이.";
+      color = "#ef4444"; 
+      load = 27; 
+    }
+    setResult({ angle: angleDeg, weight: load, level, levelTitle, description, color, points });
   };
 
   const createResultCanvas = async (): Promise<HTMLCanvasElement> => {
@@ -330,7 +409,7 @@ export default function App() {
     ctx.beginPath(); ctx.arc(sx, sy, 30, 0, Math.PI * 2); ctx.fillStyle = '#22c55e'; ctx.fill();
     ctx.beginPath(); ctx.arc(sx, sy, 45, 0, Math.PI * 2); ctx.strokeStyle = 'white'; ctx.lineWidth = 6; ctx.stroke();
     
-    // Labels
+    // Labels on Result Canvas
     ctx.font = 'bold 60px Inter, sans-serif'; ctx.fillStyle = 'white'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 15; ctx.textBaseline = 'middle';
     const isEarRightLabel = result!.points.ear.x > 0.65; const isShoulderRightLabel = result!.points.shoulder.x > 0.65;
     ctx.textAlign = isEarRightLabel ? 'right' : 'left'; ctx.fillText("👂 EAR", ex + (isEarRightLabel ? -60 : 60), ey);
@@ -341,7 +420,7 @@ export default function App() {
     ctx.fillStyle = result!.color; ctx.fillRect(0, photoHeight - 10, shareCanvas.width, 20);
 
     // 2. Result Area
-    const contentY = photoHeight + 60;
+    const contentY = photoHeight + 50;
     
     // Turtle
     const svgElement = document.getElementById(`turtle-svg-${result!.level}`);
@@ -351,17 +430,21 @@ export default function App() {
       const svgUrl = URL.createObjectURL(svgBlob);
       const turtleImg = new Image(); turtleImg.src = svgUrl;
       await new Promise(r => turtleImg.onload = r);
-      ctx.drawImage(turtleImg, shareCanvas.width / 2 - 180, contentY, 360, 360);
+      ctx.drawImage(turtleImg, shareCanvas.width / 2 - 180, contentY - 30, 360, 360);
       URL.revokeObjectURL(svgUrl);
     }
 
-    // Text info
+    // Level Title
     ctx.textAlign = 'center';
     ctx.fillStyle = result!.color; ctx.font = '900 90px Inter, sans-serif';
-    ctx.fillText(result!.levelTitle, shareCanvas.width / 2, contentY + 440);
+    ctx.fillText(result!.levelTitle, shareCanvas.width / 2, contentY + 360);
     
+    // Description (New)
+    ctx.fillStyle = '#475569'; ctx.font = '500 40px Inter, sans-serif';
+    ctx.fillText(`"${result!.description}"`, shareCanvas.width / 2, contentY + 430);
+
     // Stats Box
-    const boxY = contentY + 500;
+    const boxY = contentY + 490;
     ctx.fillStyle = '#f1f5f9'; ctx.roundRect(100, boxY, 880, 200, 40); ctx.fill();
     ctx.fillStyle = '#475569'; ctx.font = 'bold 50px Inter';
     ctx.fillText("목 각도", 320, boxY + 80); ctx.fillText("경추 하중", 760, boxY + 80);
@@ -370,9 +453,9 @@ export default function App() {
 
     // Footer
     ctx.fillStyle = '#94a3b8'; ctx.font = '500 36px Inter';
-    ctx.fillText('당신의 목 건강 지킴이, 거북목 레벨테스트 🐢', shareCanvas.width / 2, shareCanvas.height - 80);
+    ctx.fillText('당신의 목 건강 지킴이, 거북목 레벨테스트 🐢', shareCanvas.width / 2, shareCanvas.height - 90);
     ctx.fillStyle = '#cbd5e1'; ctx.font = '500 28px Inter';
-    ctx.fillText('Created by @acedoctor2026', shareCanvas.width / 2, shareCanvas.height - 30);
+    ctx.fillText('Created by @acedoctor2026', shareCanvas.width / 2, shareCanvas.height - 40);
 
     return shareCanvas;
   };
@@ -389,7 +472,7 @@ export default function App() {
 
   const handleShare = async () => {
     if (!result) return;
-    const shareText = `[거북목 레벨테스트]\n내 레벨: ${result.levelTitle}\n각도: ${result.angle}° (하중 ${result.weight}kg)\n\n🐢 지금 바로 측정해보세요!`;
+    const shareText = `[거북목 레벨테스트]\n내 레벨: ${result.levelTitle}\n"${result.description}"\n\n🐢 지금 바로 측정해보세요!`;
     const shareUrl = window.location.origin + window.location.pathname;
     try {
       if (navigator.share && navigator.canShare && navigator.canShare({ text: shareText, url: shareUrl })) { 
@@ -446,7 +529,7 @@ export default function App() {
           <div className="space-y-4 animate-fade-in">
             {/* Analysis View */}
             <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-slate-900 aspect-[3/4] ring-4 ring-white">
-              <canvas ref={canvasRef} onPointerDown={!result ? handlePointerDown : undefined} onPointerMove={!result ? handlePointerMove : undefined} onPointerUp={() => setDraggingPoint(null)} className="w-full h-full object-contain" />
+              <canvas ref={canvasRef} onPointerDown={!result ? handlePointerDown : undefined} onPointerMove={!result ? handlePointerMove : undefined} onPointerUp={() => setDraggingPoint(null)} className="w-full h-full object-contain touch-none" />
               {isAnalyzing && (
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white">
                   <RefreshCcw className="w-10 h-10 animate-spin mb-4 opacity-80" />
@@ -461,12 +544,27 @@ export default function App() {
             </div>
 
             {!result && !isAnalyzing && (
-              <div className="grid grid-cols-3 gap-2">
-                <button onClick={resetAll} className="col-span-1 py-4 text-slate-500 font-bold bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-sm">재촬영</button>
-                <button onClick={handleConfirmPoints} className="col-span-2 py-4 bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
-                  결과 확인하기 <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
+              <>
+                {/* Clean Dot Legend */}
+                <div className="flex justify-center items-center gap-8 py-2 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 rounded-full bg-red-500 ring-4 ring-red-100"></div>
+                    <span className="text-sm font-bold text-slate-700">귀 (Ear)</span>
+                  </div>
+                  <div className="w-px h-4 bg-slate-200"></div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 rounded-full bg-emerald-500 ring-4 ring-emerald-100"></div>
+                    <span className="text-sm font-bold text-slate-700">어깨 (Shoulder)</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={resetAll} className="col-span-1 py-4 text-slate-500 font-bold bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-sm">재촬영</button>
+                  <button onClick={handleConfirmPoints} className="col-span-2 py-4 bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
+                    결과 확인하기 <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
             )}
 
             {result && (
@@ -492,18 +590,28 @@ export default function App() {
                         </div>
                         <div className="flex-1">
                            <h2 className="text-xl font-black text-slate-900 leading-tight mb-2 break-keep">{result.levelTitle}</h2>
-                           <div className="grid grid-cols-2 gap-2">
-                             <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
-                               <p className="text-[9px] font-bold text-slate-400 uppercase">Angle</p>
-                               <p className="text-base font-black text-slate-800">{result.angle}°</p>
-                             </div>
-                             <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
-                               <p className="text-[9px] font-bold text-slate-400 uppercase">Load</p>
-                               <p className="text-base font-black text-slate-800">{result.weight}kg</p>
-                             </div>
+                           {/* Description Block (New) */}
+                           <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 relative mt-1">
+                              <Quote className="w-4 h-4 text-slate-300 absolute -top-2 -left-1 fill-slate-100" />
+                              <p className="text-[11px] font-bold text-slate-600 leading-relaxed text-center break-keep">
+                                "{result.description}"
+                              </p>
                            </div>
                         </div>
                      </div>
+
+                     {/* Stats (Compact Grid) */}
+                     <div className="grid grid-cols-2 gap-2 mb-4">
+                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
+                         <p className="text-[9px] font-bold text-slate-400 uppercase">Angle</p>
+                         <p className="text-base font-black text-slate-800">{result.angle}°</p>
+                       </div>
+                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
+                         <p className="text-[9px] font-bold text-slate-400 uppercase">Load</p>
+                         <p className="text-base font-black text-slate-800">{result.weight}kg</p>
+                       </div>
+                     </div>
+                     
                      <div className="w-full h-px bg-slate-100" />
                      <NeckLoadChart activeAngle={result.angle} />
                    </div>
