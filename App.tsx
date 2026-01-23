@@ -134,13 +134,13 @@ const NeckLoadChart = ({ activeAngle }: { activeAngle: number }) => {
 const PhotoGuide = () => (
   <div className="bg-emerald-50/60 rounded-xl p-4 border border-emerald-100/50 mb-4">
     <h3 className="font-bold text-emerald-900 text-xs flex items-center mb-2.5">
-      <Camera className="w-3.5 h-3.5 mr-1.5 text-emerald-600" /> 촬영 팁
+      <Camera className="w-3.5 h-3.5 mr-1.5 text-emerald-600" /> 정확한 결과 위한 촬영 꿀팁
     </h3>
     <div className="grid grid-cols-1 gap-2">
       {[
-        "평소 편한 자세로 옆모습 촬영",
+        "평소 편한 자세로 촬영 준비",
         "어깨와 귀가 보이게 머리 정리",
-        "타이머/지인 도움으로 수평 유지"
+        "타이머 촬영 혹은 지인 도움으로 최대한 옆모습으로 촬영"
       ].map((text, i) => (
         <div key={i} className="flex items-center text-[11px] text-emerald-800/80 bg-white/40 rounded-lg px-2.5 py-1.5">
           <span className="bg-emerald-200 text-emerald-700 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px] font-bold mr-2 shrink-0">{i+1}</span>
@@ -367,7 +367,7 @@ export default function App() {
       description = "당신은 인류의 진화를 정면으로 거스른 닌자거북이.";
       color = "#ef4444"; 
       if (angleDeg > 60) {
-        load = "30kg 이상";
+        load = "27kg 이상";
       } else {
         load = "27kg";
       }
@@ -444,7 +444,8 @@ export default function App() {
     ctx.fillStyle = result!.color; ctx.fillRect(0, photoHeight - 10, shareCanvas.width, 20);
 
     // 2. Result Area (Utilize more space from 55% bottom)
-    const contentY = photoHeight + 80;
+    // Reduce gap significantly here (from +80 to +20)
+    const contentY = photoHeight + 20;
     
     // Turtle
     const svgElement = document.getElementById(`turtle-svg-${result!.level}`);
@@ -459,16 +460,21 @@ export default function App() {
     }
 
     // Level Title
+    // Increase gap between turtle and text to prevent overlap
+    // Turtle bottom is contentY + 360.
+    // Text baseline at contentY + 450 (90px gap from image bottom, 90px font size area)
+    const titleY = contentY + 450;
     ctx.textAlign = 'center';
     ctx.fillStyle = result!.color; ctx.font = '900 90px Inter, sans-serif';
-    ctx.fillText(result!.levelTitle, shareCanvas.width / 2, contentY + 400);
+    ctx.fillText(result!.levelTitle, shareCanvas.width / 2, titleY);
     
     // Description (New)
+    const descY = titleY + 70;
     ctx.fillStyle = '#475569'; ctx.font = '500 40px Inter, sans-serif';
-    ctx.fillText(`"${result!.description}"`, shareCanvas.width / 2, contentY + 470);
+    ctx.fillText(`"${result!.description}"`, shareCanvas.width / 2, descY);
 
     // Stats Box
-    const boxY = contentY + 540;
+    const boxY = descY + 60;
     ctx.fillStyle = '#f1f5f9'; ctx.roundRect(100, boxY, 880, 200, 40); ctx.fill();
     ctx.fillStyle = '#475569'; ctx.font = 'bold 50px Inter';
     ctx.fillText("목 각도", 320, boxY + 80); ctx.fillText("경추 하중", 760, boxY + 80);
