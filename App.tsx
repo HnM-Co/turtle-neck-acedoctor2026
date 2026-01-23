@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Camera, Share2, AlertCircle, RefreshCcw, MousePointer2,
-  Image as ImageIcon, Download, Check, ChevronRight, Quote
+  Image as ImageIcon, Download, Check, ChevronRight, Quote, X
 } from 'lucide-react';
 
 // Type definitions for MediaPipe globals
@@ -47,18 +47,36 @@ const TurtleCharacter: React.FC<{ level: number; size?: number; className?: stri
       }; 
       case 4: return { // Ninja
         skin: "#ef4444", shell: "#991b1b", belly: "#fee2e2", mask: "ninja", eye: "white", 
-        prop: <path d="M15 60 L85 120 M85 60 L15 120" stroke="rgba(0,0,0,0.1)" strokeWidth="4" />
+        // Dual Swords on Back
+        backProp: (
+          <g>
+            {/* Blade 1 (Left to Right) */}
+            <path d="M20 10 L80 90" stroke="#cbd5e1" strokeWidth="6" strokeLinecap="round" />
+            <path d="M20 10 L35 30" stroke="#1e293b" strokeWidth="6" strokeLinecap="round" /> {/* Handle */}
+            <path d="M30 32 L40 24" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" /> {/* Guard */}
+            
+            {/* Blade 2 (Right to Left) */}
+            <path d="M80 10 L20 90" stroke="#cbd5e1" strokeWidth="6" strokeLinecap="round" />
+            <path d="M80 10 L65 30" stroke="#1e293b" strokeWidth="6" strokeLinecap="round" /> {/* Handle */}
+            <path d="M70 32 L60 24" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" /> {/* Guard */}
+          </g>
+        ),
+        prop: null
       };
       default: return { skin: "#4ade80", shell: "#16a34a", belly: "#dcfce7", mask: "none", eye: "black", prop: null };
     }
   };
 
-  const s = getStyle();
+  const s = getStyle() as any;
 
   return (
     <svg id={id} viewBox="0 0 100 100" className={`drop-shadow-lg overflow-visible ${className}`} style={{ width: size, height: size }} xmlns="http://www.w3.org/2000/svg">
       {level === 4 && <circle cx="50" cy="50" r="45" fill="none" stroke="#ef4444" strokeWidth="2" strokeDasharray="4 4" className="animate-spin-slow" />}
       {level === 0 && <circle cx="50" cy="50" r="45" fill="none" stroke="#fbbf24" strokeWidth="2" strokeDasharray="10 5" className="animate-pulse" />}
+      
+      {/* Back Props (Swords) */}
+      {s.backProp}
+      
       <path d="M25 70 Q15 85 25 90" fill={s.skin} stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
       <path d="M75 70 Q85 85 75 90" fill={s.skin} stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
       <path d="M25 50 Q10 55 15 70" fill={s.skin} stroke="rgba(0,0,0,0.1)" strokeWidth="1"/>
@@ -134,7 +152,7 @@ const PhotoGuide = () => (
 );
 
 interface AnalysisResult {
-  angle: number; weight: number; level: number; levelTitle: string; description: string; color: string; points: Points;
+  angle: number; weight: string; level: number; levelTitle: string; description: string; color: string; points: Points;
 }
 interface Points { ear: { x: number; y: number }; shoulder: { x: number; y: number }; }
 
@@ -148,6 +166,8 @@ export default function App() {
   const [isProcessingAction, setIsProcessingAction] = useState<'download' | 'share' | null>(null);
   const [toastMessage, setToastMessage] = useState('');
   const [isToastVisible, setIsToastVisible] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveImageUrl, setSaveImageUrl] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -315,38 +335,42 @@ export default function App() {
     const canvas = canvasRef.current;
     const deltaX = Math.abs(points.ear.x - points.shoulder.x) * canvas.width, deltaY = (points.shoulder.y - points.ear.y) * canvas.height;
     const angleDeg = Math.round(Math.atan2(deltaX, Math.max(1, deltaY)) * (180 / Math.PI));
-    let load = 5, level = 0, levelTitle = "", description = "", color = "";
+    let load = "5kg", level = 0, levelTitle = "", description = "", color = "";
     
     if (angleDeg <= 5) { 
       level = 0; 
       levelTitle = "LV.0 탈거북 휴먼"; 
       description = "교과서 표본이네요. 혹시, 폰 안 쓰십니까?";
       color = "#3b82f6"; 
-      load = 5; 
+      load = "5kg"; 
     } else if (angleDeg <= 15) { 
       level = 1; 
       levelTitle = "LV.1 아기거북이"; 
       description = "아직은 사람 목입니다. 두 턱 만들기 10번씩 하세요!";
       color = "#22c55e"; 
-      load = 12; 
+      load = "12kg"; 
     } else if (angleDeg <= 30) { 
       level = 2; 
       levelTitle = "LV.2 수험생 거북이"; 
       description = "목 위에 볼링공 하나 얹고 사시네요. 어깨 안아프십니까?";
       color = "#eab308"; 
-      load = 18; 
+      load = "18kg"; 
     } else if (angleDeg <= 45) { 
       level = 3; 
       levelTitle = "LV.3 거북도사"; 
       description = "이 정도면 척추가 주인을 고소해도 법적으로 할 말 없습니다.";
       color = "#f97316"; 
-      load = 22; 
+      load = "22kg"; 
     } else { 
       level = 4; 
       levelTitle = "LV.4 닌자거북이"; 
       description = "당신은 인류의 진화를 정면으로 거스른 닌자거북이.";
       color = "#ef4444"; 
-      load = 27; 
+      if (angleDeg > 60) {
+        load = "30kg 이상";
+      } else {
+        load = "27kg";
+      }
     }
     setResult({ angle: angleDeg, weight: load, level, levelTitle, description, color, points });
   };
@@ -359,8 +383,8 @@ export default function App() {
     shareCanvas.width = 1080; shareCanvas.height = 1920; 
     ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, shareCanvas.width, shareCanvas.height);
     
-    // 1. Photo Area (Top 55%)
-    const photoHeight = shareCanvas.height * 0.55;
+    // 1. Photo Area (Top 45% - Adjusted from 55%)
+    const photoHeight = shareCanvas.height * 0.45;
     ctx.save();
     ctx.beginPath(); ctx.rect(0, 0, shareCanvas.width, photoHeight); ctx.clip();
     ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, shareCanvas.width, photoHeight);
@@ -419,8 +443,8 @@ export default function App() {
     // Separator
     ctx.fillStyle = result!.color; ctx.fillRect(0, photoHeight - 10, shareCanvas.width, 20);
 
-    // 2. Result Area
-    const contentY = photoHeight + 50;
+    // 2. Result Area (Utilize more space from 55% bottom)
+    const contentY = photoHeight + 80;
     
     // Turtle
     const svgElement = document.getElementById(`turtle-svg-${result!.level}`);
@@ -430,26 +454,35 @@ export default function App() {
       const svgUrl = URL.createObjectURL(svgBlob);
       const turtleImg = new Image(); turtleImg.src = svgUrl;
       await new Promise(r => turtleImg.onload = r);
-      ctx.drawImage(turtleImg, shareCanvas.width / 2 - 180, contentY - 30, 360, 360);
+      ctx.drawImage(turtleImg, shareCanvas.width / 2 - 180, contentY, 360, 360);
       URL.revokeObjectURL(svgUrl);
     }
 
     // Level Title
     ctx.textAlign = 'center';
     ctx.fillStyle = result!.color; ctx.font = '900 90px Inter, sans-serif';
-    ctx.fillText(result!.levelTitle, shareCanvas.width / 2, contentY + 360);
+    ctx.fillText(result!.levelTitle, shareCanvas.width / 2, contentY + 400);
     
     // Description (New)
     ctx.fillStyle = '#475569'; ctx.font = '500 40px Inter, sans-serif';
-    ctx.fillText(`"${result!.description}"`, shareCanvas.width / 2, contentY + 430);
+    ctx.fillText(`"${result!.description}"`, shareCanvas.width / 2, contentY + 470);
 
     // Stats Box
-    const boxY = contentY + 490;
+    const boxY = contentY + 540;
     ctx.fillStyle = '#f1f5f9'; ctx.roundRect(100, boxY, 880, 200, 40); ctx.fill();
     ctx.fillStyle = '#475569'; ctx.font = 'bold 50px Inter';
     ctx.fillText("목 각도", 320, boxY + 80); ctx.fillText("경추 하중", 760, boxY + 80);
     ctx.fillStyle = '#1e293b'; ctx.font = '900 80px Inter';
-    ctx.fillText(`${result!.angle}°`, 320, boxY + 160); ctx.fillText(`${result!.weight}kg`, 760, boxY + 160);
+    ctx.fillText(`${result!.angle}°`, 320, boxY + 160); 
+    
+    // Dynamic Font Size for Weight
+    const weightText = result!.weight;
+    if (weightText.length > 5) {
+        ctx.font = '900 60px Inter';
+    } else {
+        ctx.font = '900 80px Inter';
+    }
+    ctx.fillText(weightText, 760, boxY + 160);
 
     // Footer
     ctx.fillStyle = '#94a3b8'; ctx.font = '500 36px Inter';
@@ -460,14 +493,23 @@ export default function App() {
     return shareCanvas;
   };
 
-  const handleDownload = async () => {
-    if (!result) return; setIsProcessingAction('download');
+  const handleSaveImage = async () => {
+    if (!result) return; 
+    setIsProcessingAction('download');
     try {
       const canvas = await createResultCanvas();
-      const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));
-      const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `turtle-check-result.png`; link.click();
-      showToast('리포트가 앨범에 저장되었습니다!');
-    } catch (err) { showToast('저장에 실패했습니다.'); } finally { setIsProcessingAction(null); }
+      const url = canvas.toDataURL('image/png');
+      setSaveImageUrl(url);
+      setShowSaveModal(true);
+    } catch (err) { 
+      showToast('이미지 생성에 실패했습니다.'); 
+    } finally { 
+      setIsProcessingAction(null); 
+    }
+  };
+
+  const closeSaveModal = () => {
+    setShowSaveModal(false);
   };
 
   const handleShare = async () => {
@@ -608,7 +650,7 @@ export default function App() {
                        </div>
                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 text-center">
                          <p className="text-[9px] font-bold text-slate-400 uppercase">Load</p>
-                         <p className="text-base font-black text-slate-800">{result.weight}kg</p>
+                         <p className="text-base font-black text-slate-800">{result.weight}</p>
                        </div>
                      </div>
                      
@@ -619,7 +661,7 @@ export default function App() {
 
                 {/* Actions */}
                 <div className="grid grid-cols-2 gap-2.5">
-                  <button onClick={handleDownload} disabled={!!isProcessingAction} className="bg-slate-900 text-white py-3.5 rounded-xl font-bold text-sm shadow-xl shadow-slate-900/10 active:scale-95 disabled:opacity-70 transition-all flex items-center justify-center gap-2">
+                  <button onClick={handleSaveImage} disabled={!!isProcessingAction} className="bg-slate-900 text-white py-3.5 rounded-xl font-bold text-sm shadow-xl shadow-slate-900/10 active:scale-95 disabled:opacity-70 transition-all flex items-center justify-center gap-2">
                     {isProcessingAction === 'download' ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                     저장
                   </button>
@@ -637,6 +679,24 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Save Modal */}
+      {showSaveModal && saveImageUrl && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-fade-in" onClick={closeSaveModal}>
+          <div className="bg-white p-2 rounded-2xl shadow-2xl max-w-sm w-full relative animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+             <button onClick={closeSaveModal} className="absolute -top-4 -right-4 bg-slate-900 text-white p-2 rounded-full shadow-lg hover:bg-slate-700 transition-colors">
+               <X className="w-5 h-5" />
+             </button>
+             <img src={saveImageUrl} className="w-full rounded-xl border border-slate-100 shadow-sm" alt="결과 이미지" />
+             <div className="text-center mt-4 mb-2">
+                <p className="font-bold text-slate-900 text-lg">결과 이미지 저장</p>
+                <p className="text-slate-500 text-sm mt-1">이미지를 꾹 눌러 앨범에 저장하세요 📸</p>
+                <p className="text-slate-400 text-[10px] mt-0.5">(아이폰/갤럭시 모두 가능)</p>
+             </div>
+             <button onClick={closeSaveModal} className="w-full bg-slate-100 text-slate-900 font-bold py-3.5 rounded-xl mt-3 hover:bg-slate-200 transition-colors">닫기</button>
+          </div>
+        </div>
+      )}
       
       <Toast message={toastMessage} visible={isToastVisible} />
       
