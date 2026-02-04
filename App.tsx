@@ -619,6 +619,8 @@ export default function App() {
                   </div>
                 </div>
 
+                <DisplayAd className="mb-2" />
+
                 <div className="grid grid-cols-3 gap-2">
                   <button onClick={resetAll} className="col-span-1 py-4 text-slate-500 font-bold bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-sm">재촬영</button>
                   <button onClick={handleConfirmPoints} className="col-span-2 py-4 bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
