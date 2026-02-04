@@ -25,6 +25,16 @@ const Toast = ({ message, visible }: { message: string; visible: boolean }) => (
   </div>
 );
 
+// --- Ad Component ---
+const DisplayAd = ({ className = "" }: { className?: string }) => (
+  <div className={`w-full bg-slate-100 border border-slate-200/60 rounded-xl flex flex-col items-center justify-center min-h-[100px] relative overflow-hidden shadow-inner ${className}`}>
+    <span className="absolute top-1.5 right-2 text-[9px] text-slate-400 border border-slate-300 px-1 rounded bg-white/50">AD</span>
+    <div className="flex flex-col items-center gap-1 opacity-50">
+       <span className="text-slate-400 text-[10px] font-medium">Sponsored Area</span>
+    </div>
+  </div>
+);
+
 // --- High Quality Turtle Character (SVG) ---
 const TurtleCharacter: React.FC<{ level: number; size?: number; className?: string; id?: string }> = ({ level, size = 180, className = "", id }) => {
   const getStyle = () => {
@@ -367,7 +377,7 @@ export default function App() {
       description = "당신은 인류의 진화를 정면으로 거스른 닌자거북이.";
       color = "#ef4444"; 
       if (angleDeg > 60) {
-        load = "27kg 이상";
+        load = "30kg 이상";
       } else {
         load = "27kg";
       }
@@ -566,6 +576,9 @@ export default function App() {
                 </button>
               </div>
             </div>
+            
+            <DisplayAd />
+            
             <PhotoGuide />
             <div className="text-center mt-2">
                <p className="text-[10px] text-slate-400">Created by <span className="font-bold">@acedoctor2026</span></p>
@@ -664,6 +677,8 @@ export default function App() {
                      <NeckLoadChart activeAngle={result.angle} />
                    </div>
                 </div>
+
+                <DisplayAd />
 
                 {/* Actions */}
                 <div className="grid grid-cols-2 gap-2.5">
